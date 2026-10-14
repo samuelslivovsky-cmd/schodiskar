@@ -7960,12 +7960,17 @@ void main() {
       });
       svg.addEventListener('mouseleave', hideTip);
       // klik (bez posunu výkresu) na stupeň = výber na úpravu
+      // stupeň sa určí pri stlačení: posun výkresu zachytáva ukazovateľ, takže click by mieril na plátno
       let down = null;
-      svg.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY }; });
-      svg.addEventListener('click', e => {
-        if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4) return;
-        const p = e.target.closest && e.target.closest('.hov');
-        if (p) { sel = +p.dataset.n; hideTip(); renderView(); }
+      svg.addEventListener('pointerdown', e => {
+        const p = e.button === 0 && e.target.closest && e.target.closest('.hov');
+        down = p ? { x: e.clientX, y: e.clientY, n: +p.dataset.n } : null;
+      });
+      cv.addEventListener('pointerup', e => {
+        const d = down;
+        down = null;
+        if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4) return;
+        sel = d.n; hideTip(); renderView();
       });
       svg.querySelectorAll('.hov').forEach(p => p.classList.toggle('hl', +p.dataset.n === sel));
       svg.querySelectorAll('.hd').forEach(c => c.addEventListener('pointerdown', startEdgeDrag));
