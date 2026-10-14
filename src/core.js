@@ -330,6 +330,10 @@
     w: 0, nb: 3,
     presah: 30, hrubka: 40, hrubkaPodst: 20,
     sirkaSchodnice: 300, hrubkaSchodnice: 60,
+    podlahaDole: 0, podlahaHore: 0,
+    strop: 250, otvor: 0,
+    vyskaZabradlia: 900,
+    doskaDlzka: 3000, doskaSirka: 1200, rez: 4,
     lim: { hMin: 150, hMax: 200, bMin: 220, kMin: 600, kMax: 650, kCiel: 630, klinMin: 100, klinVzd: 150, podchod: 2100 }
   };
 
@@ -764,7 +768,17 @@
     res.treads = treads;
 
     // ---- podstupnice
-    res.risers = edges.map(e => ({ n: e.i + 1, P: e.P, Q: e.Q, dlzka: dist(e.P, e.Q), vyska: Math.max(0, h - P.hrubka) }));
+    // prvá od hrubej podlahy dole, posledná po hrubú podlahu hore
+    const dole = Math.max(0, P.podlahaDole), hore = Math.max(0, P.podlahaHore);
+    res.podlaha = { dole, hore, hruba: H + dole - hore };
+    if (hore >= h) res.warnings.push('Nášľapná vrstva hore je hrubšia ako výška stupňa.');
+    res.risers = edges.map(e => ({
+      n: e.i + 1, P: e.P, Q: e.Q, dlzka: dist(e.P, e.Q),
+      vyska: Math.max(0, e.i === N - 1 ? h - hore : h - P.hrubka + (e.i === 0 ? dole : 0))
+    }));
+
+    // ---- podchodná výška pod stropom (okrem točitých)
+    if (!res.errors.length && P.typ !== 'tocite') res.strop = headroom(P, res, edges, kinds, N, h, H);
 
     // ---- geometria na kreslenie
     res.geom = {
@@ -820,7 +834,7 @@
   }
 
   // orientačný tvar schodnice
-  function stringerShapes(pos, kinds, N, h, H, Ws, e) {
+  function stringerShapes(pos, kinds, N, h, H, Ws, e, dole) {
     const groups = [];
     let cur = null;
     for (let j = 1; j < N; j++) {
@@ -833,7 +847,7 @@
       for (let k = gr.a; k <= gr.e; k++) U.push(v(pos[k - 1], k * h + e));
       // koncový nosný bod: podlaha hore alebo predná hrana podesty
       U.push(v(pos[gr.e], (gr.e + 1) * h + e));
-      const yBase = (gr.a - 1) * h;
+      const yBase = gr.a === 1 ? -(dole || 0) : (gr.a - 1) * h; // prvé rameno stojí na hrubej podlahe
       const yTop = (gr.e + 1) * h + e;
       const xEnd = pos[gr.e];
       if (U.length < 2) continue;
@@ -875,10 +889,165 @@
         pos,
         rohy: cornerParams(path),
         profil: prof,
-        tvary: stringerShapes(pos, kinds, N, h, H, P.sirkaSchodnice, 50)
+        tvary: stringerShapes(pos, kinds, N, h, H, P.sirkaSchodnice, 50, Math.max(0, P.podlahaDole))
       };
     };
     return { vnutorna: make(inner, 't'), vonkajsia: make(wall, 'u') };
+  }
+
+  // výška spojnice hrán stupňov (nad podestou jej povrch) v parametri s výstupnej čiary
+  function nosingZ(edges, kinds, N, h, s) {
+    if (s <= edges[0].s) return h;
+    for (let i = 0; i < N - 1; i++) {
+      const a = edges[i].s, b = edges[i + 1].s;
+      if (s <= b) return kinds[i + 1] === 'podesta' ? (i + 1) * h : (i + 1) * h + h * (s - a) / (b - a || 1);
+    }
+    return N * h;
+  }
+
+  // otvor v strope meraný po výstupnej čiare od výstupu
+  function headroom(P, res, edges, kinds, N, h, H) {
+    const Lw = edges[N - 1].s, s0 = edges[0].s;
+    const zReq = H - Math.max(0, P.strop) - P.lim.podchod; // najvyššia spojnica hrán pod stropom
+    let sReq;
+    if (zReq <= h) sReq = s0;
+    else if (zReq >= H) sReq = null;
+    else {
+      sReq = Lw;
+      for (let i = 0; i < N - 1; i++) {
+        const a = edges[i].s, b = edges[i + 1].s, z0 = (i + 1) * h;
+        if (kinds[i + 1] === 'podesta') { if (z0 > zReq) { sReq = a; break; } continue; }
+        if (z0 + h > zReq) { sReq = a + (b - a) * Math.max(0, zReq - z0) / h; break; }
+      }
+    }
+    const out = { zReq, sReq, otvorMin: sReq == null ? Infinity : Lw - sReq, sEdge: null, svetla: null };
+    if (P.otvor > 0) {
+      out.sEdge = Lw - P.otvor;
+      out.svetla = H - Math.max(0, P.strop) - nosingZ(edges, kinds, N, h, out.sEdge);
+    }
+    return out;
+  }
+
+  // zábradlie: rozmiestnenie prvkov podľa druhu (rovnaké pravidlá pre 3D aj rozpis)
+  const ZABRADLIE = {
+    ziadne: 'Bez zábradlia',
+    ocel: 'Čierna oceľ – zvislé tyčky',
+    nerez: 'Nerez – vodorovné priečky',
+    sklo: 'Sklo s nerezovým madlom',
+    drevo: 'Drevené stĺpiky a madlo'
+  };
+  function railing(res, typ) {
+    if (!res.unfold || !res.treads || !res.treads.length || !ZABRADLIE[typ] || typ === 'ziadne') return null;
+    const inp = res.input, h = res.h, N = res.N;
+    const spiral = inp.typ === 'tocite';
+    const pos = spiral ? res.unfold.vonkajsia.pos : res.unfold.vnutorna.pos;
+    const HR = inp.vyskaZabradlia > 0 ? inp.vyskaZabradlia : 900;
+    // body madla: stred každého stupňa vo výške hrany + HR
+    const hp = [{ s: pos[0], z: h + HR }];
+    for (let j = 1; j < N; j++) {
+      const tr = res.treads[j - 1];
+      if (tr.kind === 'podesta') { hp.push({ s: pos[j - 1] + 1, z: j * h + HR }); hp.push({ s: pos[j] - 1, z: j * h + HR }); }
+      else hp.push({ s: (pos[j - 1] + pos[j]) / 2, z: j * h + HR });
+    }
+    hp.push({ s: pos[N - 1], z: inp.H + HR });
+    const pts = [];
+    for (const q of hp) if (!pts.length || q.s - pts[pts.length - 1].s > 8) pts.push(q); // ostrý roh
+    const zAt = s => {
+      if (s <= pts[0].s) return pts[0].z;
+      for (let i = 1; i < pts.length; i++) if (s <= pts[i].s) return pts[i - 1].z + (pts[i].z - pts[i - 1].z) * (s - pts[i - 1].s) / (pts[i].s - pts[i - 1].s || 1);
+      return pts[pts.length - 1].z;
+    };
+    const treadTop = s => { for (let j = 1; j < N; j++) if (s <= pos[j] + 1e-6) return j * h; return inp.H; };
+    let madlo = 0;
+    for (let i = 1; i < pts.length; i++) madlo += Math.hypot(pts[i].s - pts[i - 1].s, pts[i].z - pts[i - 1].z);
+    const R = { typ, nazov: ZABRADLIE[typ], spiral, pos, HR, pts, zAt, treadTop, madlo, posts: [], rods: [], glass: [], prieck: 0 };
+    const post = (s, w, extra, druh) => R.posts.push({ s, w, extra, druh, z0: treadTop(s), z1: zAt(s) + extra });
+    post(pos[0] + 60, typ === 'drevo' ? 70 : 45, 40, 'koncový');
+    post(pos[N - 1] - 60, typ === 'drevo' ? 70 : 45, 40, 'koncový');
+    for (let j = 1; j < N; j++) {
+      const a = pos[j - 1], b = pos[j], w = b - a;
+      if (typ === 'ocel') {
+        const k = w > 260 ? 3 : w > 140 ? 2 : w > 40 ? 1 : 0;
+        for (let i = 1; i <= k; i++) { const s = a + w * i / (k + 1); R.rods.push({ s, j, z0: j * h, z1: zAt(s) }); }
+      } else if (typ === 'drevo') {
+        if (w > 40) post((a + b) / 2, 42, 0, 'medziľahlý');
+      } else if (typ === 'sklo') {
+        const g0 = a + Math.min(12, w * 0.1), g1 = b - Math.min(12, w * 0.1);
+        if (g1 - g0 >= 20) R.glass.push({ g0, g1, j, z0: j * h + 60, z1a: zAt(g0) - 50, z1b: zAt(g1) - 50 });
+      }
+    }
+    if (typ === 'nerez') {
+      R.prieck = 4;
+      for (let j = 1; j < N; j += 2) { const s = (pos[j - 1] + pos[j]) / 2; if (pos[j] - pos[j - 1] > 40) post(s, 36, -10, 'medziľahlý'); }
+    }
+    return R;
+  }
+
+  // rozloženie obdĺžnikových prírezov na dosky (MaxRects, bez otáčania – vlákna po dĺžke dosky)
+  function nest(pieces, D, S, kerf) {
+    // niekoľko poradí a kritérií, vyberie sa najmenej dosiek (potom najprázdnejšia posledná)
+    const orders = [
+      (a, b) => b.w * b.h - a.w * a.h || b.w - a.w,
+      (a, b) => b.h - a.h || b.w - a.w,
+      (a, b) => b.w - a.w || b.h - a.h,
+      (a, b) => Math.max(b.w / D, b.h / S) - Math.max(a.w / D, a.h / S)
+    ];
+    let best = null;
+    for (const ord of orders) for (const rule of ['bssf', 'bl', 'baf']) {
+      const r = nestOnce(pieces.slice().sort(ord), D, S, kerf, rule);
+      const last = r.boards.length ? r.boards[r.boards.length - 1].vyuzitie : 0;
+      if (!best || r.boards.length < best.boards.length || (r.boards.length === best.boards.length && last < best.last)) { best = r; best.last = last; }
+    }
+    delete best.last;
+    return best;
+  }
+  function nestOnce(list, D, S, kerf, rule) {
+    const boards = [], nevojde = [];
+    const place = (fr, w, h) => {
+      let best = null;
+      for (const f of fr) {
+        if (w <= f.w + 1e-6 && h <= f.h + 1e-6) {
+          const sc = rule === 'bl' ? f.y : rule === 'baf' ? f.w * f.h - w * h : Math.min(f.w - w, f.h - h);
+          const sc2 = rule === 'bl' ? f.x : Math.min(f.w - w, f.h - h);
+          if (!best || sc < best.sc || (sc === best.sc && sc2 < best.sc2) || (sc === best.sc && sc2 === best.sc2 && (f.y < best.f.y || (f.y === best.f.y && f.x < best.f.x)))) best = { f, sc, sc2 };
+        }
+      }
+      return best && best.f;
+    };
+    const split = (fr, r) => {
+      const out = [];
+      for (const f of fr) {
+        if (r.x >= f.x + f.w || r.x + r.w <= f.x || r.y >= f.y + f.h || r.y + r.h <= f.y) { out.push(f); continue; }
+        if (r.x > f.x) out.push({ x: f.x, y: f.y, w: r.x - f.x, h: f.h });
+        if (r.x + r.w < f.x + f.w) out.push({ x: r.x + r.w, y: f.y, w: f.x + f.w - r.x - r.w, h: f.h });
+        if (r.y > f.y) out.push({ x: f.x, y: f.y, w: f.w, h: r.y - f.y });
+        if (r.y + r.h < f.y + f.h) out.push({ x: f.x, y: r.y + r.h, w: f.w, h: f.y + f.h - r.y - r.h });
+      }
+      return out.filter((a, i) => a.w > 1e-6 && a.h > 1e-6 && !out.some((b, k) => k !== i && b.x <= a.x + 1e-9 && b.y <= a.y + 1e-9 && b.x + b.w >= a.x + a.w - 1e-9 && b.y + b.h >= a.y + a.h - 1e-9 && (k < i || b.w * b.h > a.w * a.h)));
+    };
+    for (const p of list) {
+      // rez sa pripočíta k dielcu; na okraji dosky netreba
+      const w = p.w + kerf, hh = p.h + kerf;
+      if (p.w > D + 1e-6 || p.h > S + 1e-6) { nevojde.push(p); continue; }
+      let done = false;
+      for (const b of boards) {
+        const f = place(b.free, w, hh) || place(b.free, p.w, p.h);
+        if (!f) continue;
+        const r = { x: f.x, y: f.y, w: Math.min(w, D - f.x), h: Math.min(hh, S - f.y) };
+        b.free = split(b.free, r);
+        b.parts.push(Object.assign({}, p, { x: f.x, y: f.y }));
+        done = true; break;
+      }
+      if (!done) {
+        const b = { free: [{ x: 0, y: 0, w: D, h: S }], parts: [] };
+        const r = { x: 0, y: 0, w: Math.min(w, D), h: Math.min(hh, S) };
+        b.free = split(b.free, r);
+        b.parts.push(Object.assign({}, p, { x: 0, y: 0 }));
+        boards.push(b);
+      }
+    }
+    for (const b of boards) { b.plocha = b.parts.reduce((a, q) => a + q.w * q.h, 0); b.vyuzitie = b.plocha / (D * S); delete b.free; }
+    return { boards, nevojde, D, S, kerf };
   }
 
   function checks(P, res, winder) {
@@ -916,6 +1085,10 @@
     if (P.typ === 'L' || P.typ === 'U') {
       const bad = res.errors.some(e => e.indexOf('pretínajú') >= 0 || e.indexOf('prechádza') >= 0);
       add('poradie', 'Výstupné hrany sa nepretínajú', !bad, bad ? 'pretínajú sa' : 'v poriadku', 'poradie rastie', 'err');
+    }
+    if (res.strop && P.otvor > 0) {
+      const st = res.strop;
+      add('podchodStrop', 'Podchodná výška pod stropom', st.svetla >= L.podchod - 1e-9, fmt(st.svetla) + ' mm', '≥ ' + L.podchod + ' mm (otvor ≥ ' + fmt(Math.ceil(st.otvorMin)) + ' mm)');
     }
     if (P.typ === 'tocite' && res.N) {
       const dth = P.uhol / (res.N - 1);
@@ -979,7 +1152,7 @@
   }
 
   return {
-    TYPY, DEFAULTS, normalize, compute, equalize,
+    TYPY, DEFAULTS, ZABRADLIE, normalize, compute, equalize, railing, nest, nosingZ,
     sampleVerts, polyArea, bbox, transformVerts, reverseClosed, arcOfBulge, partShape, fmt,
     // pre testy
     _internal: { makePath, Line, Arc, pathPoint, intersectPath, mapOffset, pathPiece, joinPieces, cleanVerts }

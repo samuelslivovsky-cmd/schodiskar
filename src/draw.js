@@ -24,7 +24,8 @@
     { name: 'TEXT', color: 7, lt: 'CONTINUOUS' },
     { name: 'ROZVINUTIE', color: 6, lt: 'CONTINUOUS' },
     { name: 'SCHODNICA', color: 30, lt: 'CONTINUOUS' },
-    { name: 'DIELCE', color: 2, lt: 'CONTINUOUS' }
+    { name: 'DIELCE', color: 2, lt: 'CONTINUOUS' },
+    { name: 'STROP', color: 210, lt: 'DASHED' }
   ];
 
   const P = (x, y) => ({ x, y });
@@ -141,6 +142,27 @@
       for (const e of res.edges) items.push(line(e.P, e.Q, { L: 'STUPNE', err: true, lw: 'stredna' }));
     }
 
+    // hrana otvoru v strope (zadaná, inak najmenšia potrebná)
+    const st = res.strop;
+    if (st && res.edges && res.edges.length > 1) {
+      const sv = st.sEdge != null ? st.sEdge : st.sReq;
+      const E = res.edges, n = E.length;
+      if (sv != null && sv > E[0].s - 1e-6 && sv < E[n - 1].s) {
+        let i = 0;
+        while (i < n - 2 && sv > E[i + 1].s) i++;
+        const f = (sv - E[i].s) / (E[i + 1].s - E[i].s || 1);
+        const lerp = (a, b) => add(a, mul(sub(b, a), f));
+        const A = lerp(E[i].P, E[i + 1].P), B = lerp(E[i].Q, E[i + 1].Q);
+        const zad = st.sEdge != null;
+        items.push(line(A, B, { L: 'STROP', dash: '-', lw: 'stredna' }));
+        const d = norm(sub(B, A));
+        let ang = Math.atan2(d.y, d.x) / DEG;
+        if (ang > 90.01) ang -= 180; if (ang < -89.99) ang += 180;
+        const m = add(mul(add(A, B), 0.5), mul(perp(d), 1.6 * ts));
+        items.push(tx(m.x, m.y, zad ? 'hrana stropu (otvor ' + fmt(inp.otvor) + ')' : 'min. otvor ' + fmt(Math.ceil(st.otvorMin)), 1.8 * ts, { L: 'STROP', ang, vmid: true }));
+      }
+    }
+
     // výstupná čiara
     items.push(pl(G.walk, { L: 'VYSTUPNA_CIARA', dash: '-.', lw: 'tenka' }));
     items.push({ k: 'ci', x: G.walkStart.x, y: G.walkStart.y, r: 1.4 * ts, L: 'VYSTUPNA_CIARA', fill: 'cur' });
@@ -237,6 +259,10 @@
       // podlahy
       its.push(line(T(P(-200, 0)), T(P(S.pos[0] + 100, 0)), { L: 'ROZVINUTIE', lw: 'tenka' }));
       its.push(line(T(P(S.pos[S.pos.length - 1] - 100, H)), T(P(S.pos[S.pos.length - 1] + 400, H)), { L: 'ROZVINUTIE', lw: 'tenka' }));
+      // hrubé podlahy (pod nášľapnou vrstvou)
+      const pd = res.podlaha || {};
+      if (pd.dole > 0) { its.push(line(P(-200, -pd.dole), P(S.pos[0] + 100, -pd.dole), { L: 'ROZVINUTIE', dash: '-' })); its.push(tx(-260, -pd.dole - 3 * ts, 'hrubá −' + fmt(pd.dole), 1.8 * ts, { L: 'TEXT', al: 'r', vmid: true })); }
+      if (pd.hore > 0) { its.push(line(P(S.pos[S.pos.length - 1] - 100, H - pd.hore), P(S.pos[S.pos.length - 1] + 400, H - pd.hore), { L: 'ROZVINUTIE', dash: '-' })); its.push(tx(S.pos[S.pos.length - 1] + 450, H - pd.hore - 3 * ts, 'hrubá +' + fmt(H - pd.hore), 1.8 * ts, { L: 'TEXT', al: 'l', vmid: true })); }
       // orientačný tvar schodnice
       for (const sh of S.tvary) its.push(pl(vv(sh.poly.map(T)), { c: true, L: 'SCHODNICA', lw: 'stredna', fill: 'schodnica' }));
       // stupňovitý profil
@@ -405,7 +431,7 @@
     '.L-STENA{stroke:#4b5563}.f-stena{fill:#d9dde3}',
     '.L-VYSTUPNA_CIARA{stroke:#c2410c}.L-VYSTUPNA_CIARA.f-cur,circle.L-VYSTUPNA_CIARA{fill:#c2410c}',
     '.L-KOTY{stroke:#2f7d4f}.L-PODSTUPNICE{stroke:#64748b}.L-SCHODNICA{stroke:#8a5a2b}.f-schodnica{fill:#e9d8c4;fill-opacity:.6}',
-    '.f-stupen{fill:#f4efe6}.f-podesta{fill:#e7efe0}.L-DIELCE{stroke:#1d2733}.err{stroke:#dc2626}',
+    '.L-STROP{stroke:#7c3aed}.T-STROP{fill:#7c3aed}.f-stupen{fill:#f4efe6}.f-podesta{fill:#e7efe0}.L-DIELCE{stroke:#1d2733}.err{stroke:#dc2626}',
     '.hov{stroke:none}',
     'text{font-family:"DejaVu Sans",Arial,sans-serif;fill:#1d2733}.T-KOTY{fill:#2f7d4f}.b{font-weight:700}'
   ].join('');

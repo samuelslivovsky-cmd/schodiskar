@@ -38,13 +38,7 @@
   const STUPNE = ['dub', 'dub_biely', 'buk', 'jasen', 'orech', 'smrek', 'mramor', 'beton', 'biela', 'antracit'];
   const PODSTUPNICE = ['ziadne', 'biela', 'antracit', 'dub', 'dub_biely', 'buk', 'jasen', 'orech', 'smrek', 'mramor', 'beton'];
   const SCHODNICE = ['biela', 'antracit', 'ocel', 'dub', 'buk', 'jasen', 'orech', 'smrek', 'beton'];
-  const ZABRADLIE = {
-    ziadne: 'Bez zábradlia',
-    ocel: 'Čierna oceľ – zvislé tyčky',
-    nerez: 'Nerez – vodorovné priečky',
-    sklo: 'Sklo s nerezovým madlom',
-    drevo: 'Drevené stĺpiky a madlo'
-  };
+  const ZABRADLIE = C.ZABRADLIE;
   const PRIESTORY = {
     moderny: { n: 'Moderný interiér', wall: 'omietka_biela', floor: 'parket_dub', bg: 0xdfe3e8, sun: 0xfff1df },
     skandinavsky: { n: 'Škandinávsky', wall: 'omietka_seda', floor: 'parket_jasen', bg: 0xe6e9ec, sun: 0xffffff },
@@ -430,77 +424,37 @@
   }
 
   function buildRailing(res, S) {
-    const inp = res.input, G = res.geom, h = res.h, N = res.N;
+    const G = res.geom;
     const grp = new THREE.Group();
-    const spiral = inp.typ === 'tocite';
-    const path = spiral ? G.wallS : G.innerS;
-    const pos = spiral ? res.unfold.vonkajsia.pos : res.unfold.vnutorna.pos;
+    const R = C.railing(res, S.zabradlie);
+    if (!R) return grp;
+    const inp = res.input;
+    const path = R.spiral ? G.wallS : G.innerS;
     const sg = insideSign(path, G.walkStart);
     const inset = Math.max(25, inp.hrubkaSchodnice / 2);
     const O = offsetSamples(path, inset, sg);
-    const HR = 900;
-    // body madla: stred každého stupňa vo výške hrany + 900
-    const hp = [{ s: pos[0], z: h + HR }];
-    for (let j = 1; j < N; j++) {
-      const tr = res.treads[j - 1];
-      if (tr.kind === 'podesta') { hp.push({ s: pos[j - 1] + 1, z: j * h + HR }); hp.push({ s: pos[j] - 1, z: j * h + HR }); }
-      else hp.push({ s: (pos[j - 1] + pos[j]) / 2, z: j * h + HR });
-    }
-    hp.push({ s: pos[N - 1], z: inp.H + HR });
-    // odstrániť príliš blízke body (ostrý roh)
-    const pts = [];
-    for (const q of hp) if (!pts.length || q.s - pts[pts.length - 1].s > 8) pts.push(q);
-    const zAt = s => {
-      if (s <= pts[0].s) return pts[0].z;
-      for (let i = 1; i < pts.length; i++) if (s <= pts[i].s) return pts[i - 1].z + (pts[i].z - pts[i - 1].z) * (s - pts[i - 1].s) / (pts[i].s - pts[i - 1].s || 1);
-      return pts[pts.length - 1].z;
-    };
+    const pts = R.pts;
     const rail = dz => pts.map(q => { const p = atS(O, q.s); return P3(p.x, p.y, q.z + dz); });
-    const treadTop = s => { for (let j = 1; j < N; j++) if (s <= pos[j] + 1e-6) return j * h; return inp.H; };
 
     const metal = material(S.zabradlie === 'nerez' || S.zabradlie === 'sklo' ? 'nerez' : 'ocel');
     const wood = material(S.stupne.match(/mramor|beton|biela|antracit/) ? 'dub' : S.stupne);
     const handMat = S.zabradlie === 'drevo' ? wood : metal;
-    const geo = [], glass = [];
+    const geo = [], posts = [], glass = [];
     const hr = S.zabradlie === 'drevo' ? 0.028 : 0.022;
     geo.push(tube(rail(0), hr, pts.length * 12));
-
-    const postAt = (s, w, extra) => { const p = atS(O, s); return boxAt(p.x, p.y, treadTop(s), zAt(s) + (extra || 0), w); };
-    // koncové stĺpiky
-    geo.push(postAt(pos[0] + 60, S.zabradlie === 'drevo' ? 70 : 45, 40));
-    geo.push(postAt(pos[N - 1] - 60, S.zabradlie === 'drevo' ? 70 : 45, 40));
-
-    for (let j = 1; j < N; j++) {
-      const a = pos[j - 1], b = pos[j], w = b - a;
-      if (S.zabradlie === 'ocel') {
-        const k = w > 260 ? 3 : w > 140 ? 2 : w > 40 ? 1 : 0;
-        for (let i = 1; i <= k; i++) {
-          const s = a + w * i / (k + 1), p = atS(O, s);
-          geo.push(rod(P3(p.x, p.y, j * h), P3(p.x, p.y, zAt(s)), 0.007, 8));
-        }
-      } else if (S.zabradlie === 'drevo') {
-        if (w > 40) { const s = (a + b) / 2; geo.push(postAt(s, 42, 0)); }
-      } else if (S.zabradlie === 'sklo') {
-        const g0 = a + Math.min(12, w * 0.1), g1 = b - Math.min(12, w * 0.1);
-        if (g1 - g0 < 20) continue;
-        const pa = atS(O, g0), pb = atS(O, g1);
-        const tb = TriBuilder();
-        const zb0 = j * h + 60, zb1 = j * h + 60;
-        tb.quad(P3(pa.x, pa.y, zb0), P3(pb.x, pb.y, zb1), P3(pb.x, pb.y, zAt(g1) - 50), P3(pa.x, pa.y, zAt(g0) - 50), [0, 0], [1, 0], [1, 1], [0, 1]);
-        glass.push(tb.build());
-      }
+    for (const q of R.posts) { const p = atS(O, q.s); posts.push(boxAt(p.x, p.y, q.z0, q.z1, q.w)); }
+    for (const q of R.rods) { const p = atS(O, q.s); geo.push(rod(P3(p.x, p.y, q.z0), P3(p.x, p.y, q.z1), 0.007, 8)); }
+    for (const q of R.glass) {
+      const pa = atS(O, q.g0), pb = atS(O, q.g1);
+      const tb = TriBuilder();
+      tb.quad(P3(pa.x, pa.y, q.z0), P3(pb.x, pb.y, q.z0), P3(pb.x, pb.y, q.z1b), P3(pa.x, pa.y, q.z1a), [0, 0], [1, 0], [1, 1], [0, 1]);
+      glass.push(tb.build());
     }
-    if (S.zabradlie === 'nerez') {
-      for (let k = 1; k <= 4; k++) geo.push(tube(rail(-k * 165), 0.007, pts.length * 12));
-      // stĺpiky každý druhý stupeň
-      for (let j = 1; j < N; j += 2) { const s = (pos[j - 1] + pos[j]) / 2; if (pos[j] - pos[j - 1] > 40) geo.push(postAt(s, 36, -10)); }
-    }
+    for (let k = 1; k <= R.prieck; k++) geo.push(tube(rail(-k * 165), 0.007, pts.length * 12));
     if (S.zabradlie === 'drevo') {
-      const posts = geo.splice(1);
-      const rails = [geo[0]];
-      grp.add(mesh(merged(rails), handMat));
+      grp.add(mesh(merged(geo), handMat));
       grp.add(mesh(merged(posts), wood));
-    } else grp.add(mesh(merged(geo), handMat));
+    } else grp.add(mesh(merged(geo.concat(posts)), handMat));
     if (glass.length) { const m = mesh(merged(glass), material('sklo'), false); m.renderOrder = 2; grp.add(m); }
     return grp;
   }

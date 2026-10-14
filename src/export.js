@@ -45,11 +45,54 @@
     const sum = (arr, k) => arr.reduce((a, b) => a + (b[k] || 0), 0);
     return {
       stupne, podst, schodnice,
+      zabradlie: railingBom(res),
+      dosky: boards(res, stupne, podst, schodnice),
       sucty: {
         stupneKs: stupne.length, stupnePlocha: sum(stupne, 'plochaPrirez'), stupneObjem: sum(stupne, 'objem'),
         podstKs: podst.length, podstObjem: sum(podst, 'objem'), schodniceObjem: sum(schodnice, 'objem')
       }
     };
+  }
+
+  function railType(inp) {
+    const t = inp.viz && inp.viz.zabradlie;
+    return C.ZABRADLIE[t] ? t : 'ocel';
+  }
+
+  // položky zábradlia podľa rovnakého rozmiestnenia ako v 3D
+  function railingBom(res) {
+    const R = C.railing(res, railType(res.input));
+    if (!R) return null;
+    const items = [];
+    const len = arr => arr.reduce((a, q) => a + (q.z1 - q.z0), 0);
+    const mx = arr => Math.max.apply(null, arr.map(q => q.z1 - q.z0));
+    const madlo = R.typ === 'drevo' ? 'Madlo drevené 60 × 45' : 'Madlo Ø 44 (' + (R.typ === 'ocel' ? 'oceľ' : 'nerez') + ')';
+    items.push({ nazov: madlo, ks: 1, rozmer: fmt(R.madlo), spolu: fmt(R.madlo / 1000, 2) + ' m', pozn: 'po dĺžke v sklone, bez prídavku na ohyby' });
+    const ends = R.posts.filter(q => q.druh === 'koncový'), mids = R.posts.filter(q => q.druh !== 'koncový');
+    const pName = w => R.typ === 'drevo' ? 'Stĺpik drevený ' + w + ' × ' + w : 'Stĺpik ' + w + ' × ' + w + (R.typ === 'ocel' ? ' (oceľ)' : ' (nerez)');
+    items.push({ nazov: pName(ends[0].w) + ' – koncový', ks: ends.length, rozmer: 'max. ' + fmt(mx(ends)), spolu: fmt(len(ends) / 1000, 2) + ' m', pozn: 'od hrany stupňa po madlo' });
+    if (mids.length) items.push({ nazov: pName(mids[0].w), ks: mids.length, rozmer: 'max. ' + fmt(mx(mids)), spolu: fmt(len(mids) / 1000, 2) + ' m' });
+    if (R.rods.length) items.push({ nazov: 'Tyčka Ø 14 (oceľ)', ks: R.rods.length, rozmer: 'max. ' + fmt(mx(R.rods)), spolu: fmt(len(R.rods) / 1000, 2) + ' m', pozn: 'zvislé, kotvené do stupňa' });
+    if (R.prieck) items.push({ nazov: 'Priečka Ø 14 (nerez)', ks: R.prieck, rozmer: fmt(R.madlo), spolu: fmt(R.prieck * R.madlo / 1000, 2) + ' m', pozn: 'rovnobežne s madlom, rozostup 165 mm' });
+    if (R.glass.length) {
+      let A = 0, wMax = 0, hMax = 0;
+      for (const q of R.glass) { const w = q.g1 - q.g0, hh = (q.z1a + q.z1b) / 2 - q.z0; A += w * hh; wMax = Math.max(wMax, w); hMax = Math.max(hMax, Math.max(q.z1a, q.z1b) - q.z0); }
+      items.push({ nazov: 'Sklo bezpečnostné (výplň)', ks: R.glass.length, rozmer: 'max. ' + fmt(wMax) + ' × ' + fmt(hMax), spolu: fmt(A / 1e6, 2) + ' m²', pozn: 'lichobežníky podľa stupňov' });
+    }
+    return { typ: R.typ, nazov: R.nazov, HR: R.HR, madlo: R.madlo, polozky: items };
+  }
+
+  // obdĺžnikové prírezy rozložené na dosky, zvlášť pre každú hrúbku
+  function boards(res, stupne, podst, schodnice) {
+    const inp = res.input;
+    const D = inp.doskaDlzka, S = inp.doskaSirka, kerf = Math.max(0, inp.rez);
+    if (!(D > 0 && S > 0)) return [];
+    const byT = {};
+    const put = (t, nazov, p) => { if (!(p.w > 1 && p.h > 1)) return; const g = byT[t] || (byT[t] = { hrubka: t, nazvy: [], pieces: [] }); if (g.nazvy.indexOf(nazov) < 0) g.nazvy.push(nazov); g.pieces.push(p); };
+    for (const q of stupne) put(inp.hrubka, 'stupne', { n: (q.druh === 'podesta' ? 'P' : 'S') + q.n, w: q.dlzka, h: q.sirka });
+    for (const q of podst) put(inp.hrubkaPodst, 'podstupnice', { n: 'Pd' + q.n, w: q.dlzka, h: q.vyska });
+    schodnice.forEach((q, i) => { if (!/^Stĺp/.test(q.nazov)) put(inp.hrubkaSchodnice, 'schodnice', { n: 'Sch' + (i + 1), w: q.dlzka, h: q.sirka }); });
+    return Object.keys(byT).map(Number).sort((a, b) => b - a).map(t => Object.assign({ hrubka: t, nazvy: byT[t].nazvy }, C.nest(byT[t].pieces, D, S, kerf)));
   }
 
   // ---------------------------------------------------------------- CSV
@@ -78,6 +121,22 @@
     rows.push(['SCHODNICE']);
     rows.push(['Názov', 'Stupne', 'Prírez dĺžka [mm]', 'Prírez šírka [mm]', 'Hrúbka [mm]', 'Objem [m³]']);
     for (const s of b.schodnice) rows.push([s.nazov, s.stupne, n0(s.dlzka), n0(s.sirka), n0(s.hrubka), n3(s.objem)]);
+    if (b.zabradlie) {
+      rows.push([]);
+      rows.push(['ZÁBRADLIE', b.zabradlie.nazov, 'výška ' + n0(b.zabradlie.HR) + ' mm']);
+      rows.push(['Položka', 'Ks', 'Dĺžka / rozmer [mm]', 'Spolu', 'Poznámka']);
+      for (const z of b.zabradlie.polozky) rows.push([z.nazov, z.ks, z.rozmer, z.spolu, z.pozn || '']);
+    }
+    if (b.dosky.length) {
+      rows.push([]);
+      rows.push(['ROZLOŽENIE PRÍREZOV NA DOSKY', 'doska ' + n0(inp.doskaDlzka) + ' × ' + n0(inp.doskaSirka) + ' mm', 'rez ' + n0(inp.rez) + ' mm']);
+      rows.push(['Hrúbka [mm]', 'Doska č.', 'Dielec', 'X [mm]', 'Y [mm]', 'Dĺžka [mm]', 'Šírka [mm]', 'Využitie dosky']);
+      for (const g of b.dosky) {
+        g.boards.forEach((bd, k) => bd.parts.forEach((q, i) => rows.push([n0(g.hrubka), k + 1, q.n, n0(q.x), n0(q.y), n0(q.w), n0(q.h), i === 0 ? fmt(bd.vyuzitie * 100) + ' %' : ''])));
+        for (const q of g.nevojde) rows.push([n0(g.hrubka), 'nevojde', q.n, '', '', n0(q.w), n0(q.h), '']);
+        rows.push(['Spolu ' + n0(g.hrubka) + ' mm', g.boards.length + ' ks dosiek']);
+      }
+    }
     rows.push([]);
     rows.push(['POLOHY VÝSTUPNÝCH HRÁN OD NÁSTUPU']);
     rows.push(['Hrana', 'Vnútorná schodnica [mm]', 'Vonkajšia schodnica [mm]', 'Výška [mm]']);
@@ -228,7 +287,7 @@
   const SCALES = [10, 20, 25, 50, 100, 200];
   const COLORS = {
     stena: [217, 221, 227], stupen: [244, 239, 230], podesta: [231, 239, 224], schodnica: [240, 228, 212],
-    STENA: [75, 85, 99], VYSTUPNA_CIARA: [194, 65, 12], KOTY: [47, 125, 79], PODSTUPNICE: [100, 116, 139], SCHODNICA: [138, 90, 43], err: [220, 38, 38]
+    STENA: [75, 85, 99], VYSTUPNA_CIARA: [194, 65, 12], KOTY: [47, 125, 79], PODSTUPNICE: [100, 116, 139], SCHODNICA: [138, 90, 43], STROP: [124, 58, 237], err: [220, 38, 38]
   };
   const LW = { tenka: 0.13, stredna: 0.3, hruba: 0.5 };
 
@@ -293,7 +352,7 @@
           doc.circle(c.x, c.y, it.r / scale, fill ? 'FD' : 'S');
         } else if (it.k === 'tx') {
           const c = T(it);
-          const col = COLORS[it.L] && it.L === 'KOTY' ? COLORS.KOTY : [29, 39, 51];
+          const col = it.L === 'KOTY' || it.L === 'STROP' ? COLORS[it.L] : [29, 39, 51];
           doc.setTextColor(col[0], col[1], col[2]);
           ptext(it.s, c.x, c.y, it.h / scale, { al: it.al, ang: it.ang, vmid: it.vmid, bold: it.bold });
           doc.setTextColor(0, 0, 0);
@@ -404,9 +463,10 @@
         y += 1;
       }
       // legenda
-      y = Math.max(y, PAGE.h - PAGE.m - 58);
+      y = Math.max(y, PAGE.h - PAGE.m - 62);
       ptext('Legenda', px, y, 2.4, { al: 'l', bold: true });
       const leg = [['VYSTUPNA_CIARA', '-.', 'výstupná čiara (• nástup, ▶ výstup)'], ['STUPNE', null, 'výstupná hrana (s presahom)'], ['PODSTUPNICE', '-', 'podstupnica'], ['KOTY', null, 'kóty pri stene, mm']];
+      if (res.strop) leg.push(['STROP', '-', inp.otvor > 0 ? 'hrana otvoru v strope' : 'najmenší potrebný otvor v strope']);
       leg.forEach((l, i) => {
         const yy = y + 4 + i * 4.2;
         const col = COLORS[l[0]] || [29, 39, 51];
@@ -511,6 +571,59 @@
       return { vykres: 'Rozpis materiálu', mierka: '—' };
     });
 
+    // --- listy: zábradlie a rozloženie prírezov na dosky
+    {
+      const b = bom(res);
+      const groups = [];
+      for (const g of b.dosky) g.boards.forEach((bd, k) => groups.push({ g, bd, k }));
+      const SC = Math.max(10, [10, 20, 25, 50].find(sc => inp.doskaDlzka / sc <= 190 && inp.doskaSirka / sc <= 60) || 50);
+      const cellW = inp.doskaDlzka / SC, cellH = inp.doskaSirka / SC + 9;
+      const top0 = PAGE.m + 16 + (b.zabradlie ? 12 + 5.2 * (b.zabradlie.polozky.length + 1) : 0);
+      const cols = Math.max(1, Math.floor((PAGE.w - 2 * PAGE.m - 10 + 8) / (cellW + 8)));
+      const rowsFirst = Math.max(0, Math.floor((PAGE.h - PAGE.m - 36 - top0) / (cellH + 4)));
+      const rowsNext = Math.max(1, Math.floor((PAGE.h - PAGE.m - 36 - PAGE.m - 16) / (cellH + 4)));
+      const chunks = [];
+      let rest = groups.slice(), first = true;
+      while (first || rest.length) {
+        const n = (first ? rowsFirst : rowsNext) * cols;
+        chunks.push(rest.slice(0, n)); rest = rest.slice(n); first = false;
+        if (n === 0 && !rest.length) break;
+      }
+      if (b.zabradlie || groups.length) chunks.forEach((chunk, ci) => pages.push(() => {
+        const x = PAGE.m + 5;
+        let y = PAGE.m + 14;
+        if (ci === 0) {
+          ptext(b.zabradlie ? 'ZÁBRADLIE A ROZLOŽENIE NA DOSKY' : 'ROZLOŽENIE PRÍREZOV NA DOSKY', x, PAGE.m + 8, 4, { al: 'l', bold: true });
+          if (b.zabradlie) {
+            ptext(b.zabradlie.nazov + ', výška madla ' + fmt(b.zabradlie.HR) + ' mm nad hranou stupňa', x, y + 3, 2.6, { al: 'l', bold: true }); y += 5;
+            const zr = [['Položka', 'Ks', 'Dĺžka / rozmer [mm]', 'Spolu', 'Poznámka']];
+            for (const z of b.zabradlie.polozky) zr.push([z.nazov, String(z.ks), z.rozmer, z.spolu, z.pozn || '']);
+            y = table(x, y, [70, 14, 50, 32, 120], zr, { head: true, align: ['l', 'r', 'l', 'r', 'l'] }) + 6;
+          }
+          y = top0 - 6;
+          if (groups.length) ptext('Doska ' + fmt(inp.doskaDlzka) + ' × ' + fmt(inp.doskaSirka) + ' mm, rez ' + fmt(inp.rez) + ' mm. Obdĺžnikové prírezy, vlákna po dĺžke dosky. ' + b.dosky.map(g => fmt(g.hrubka) + ' mm: ' + g.boards.length + ' ks' + (g.nevojde.length ? ' (' + g.nevojde.length + ' nevojde)' : '')).join(', '), x, y + 3, 2.4, { al: 'l' });
+          y += 6;
+        } else {
+          ptext('ROZLOŽENIE PRÍREZOV NA DOSKY (pokračovanie)', x, PAGE.m + 8, 4, { al: 'l', bold: true });
+          y = PAGE.m + 16;
+        }
+        chunk.forEach((it, i) => {
+          const cx = x + (i % cols) * (cellW + 8), cy = y + Math.floor(i / cols) * (cellH + 4);
+          ptext('Hrúbka ' + fmt(it.g.hrubka) + ' mm · doska ' + (it.k + 1) + ' · využitie ' + fmt(it.bd.vyuzitie * 100) + ' %', cx, cy + 3, 2.2, { al: 'l', bold: true });
+          const by = cy + 5;
+          doc.setDrawColor(90, 90, 90); doc.setLineWidth(0.25); doc.setFillColor(248, 248, 246);
+          doc.rect(cx, by, inp.doskaDlzka / SC, inp.doskaSirka / SC, 'FD');
+          for (const q of it.bd.parts) {
+            doc.setLineWidth(0.18); doc.setFillColor(244, 233, 214); doc.setDrawColor(138, 90, 43);
+            doc.rect(cx + q.x / SC, by + q.y / SC, q.w / SC, q.h / SC, 'FD');
+            const lab = q.n + (q.w / SC > 22 ? ' ' + fmt(q.w) + '×' + fmt(q.h) : '');
+            if (q.h / SC > 2.6 && q.w / SC > 5) ptext(lab, cx + (q.x + q.w / 2) / SC, by + (q.y + q.h / 2) / SC, Math.min(1.8, q.h / SC * 0.4), { vmid: true });
+          }
+        });
+        return { vykres: 'Zábradlie, rozloženie na dosky', mierka: groups.length ? '1 : ' + SC : '—' };
+      }));
+    }
+
     pages.forEach((fn, i) => {
       if (i > 0) doc.addPage('a3', 'landscape');
       frame();
@@ -544,6 +657,14 @@
       if (res.najuzsiKlin) r.push(['Najužší klin (' + inp.lim.klinVzd + ' mm)', fmt(res.najuzsiKlin.hodnota, 1) + ' mm (st. ' + res.najuzsiKlin.stupen + ')']);
       if (res.podchod != null) r.push(['Podchodná výška', fmt(res.podchod) + ' mm']);
       r.push(['Presah / hrúbka stupňa', fmt(inp.presah) + ' / ' + fmt(inp.hrubka) + ' mm']);
+      if (res.podlaha && (res.podlaha.dole || res.podlaha.hore)) {
+        r.push(['Nášľapná vrstva dole / hore', fmt(res.podlaha.dole) + ' / ' + fmt(res.podlaha.hore) + ' mm']);
+        r.push(['Výška hrubá – hrubá podlaha', fmt(res.podlaha.hruba) + ' mm']);
+      }
+      if (res.strop) {
+        r.push(['Potrebný otvor v strope (výst. čiara)', isFinite(res.strop.otvorMin) ? '≥ ' + fmt(Math.ceil(res.strop.otvorMin)) + ' mm' : 'nedá sa']);
+        if (inp.otvor > 0) r.push(['Otvor / podchodná výška', fmt(inp.otvor) + ' / ' + fmt(res.strop.svetla) + ' mm']);
+      }
     }
     return r;
   }

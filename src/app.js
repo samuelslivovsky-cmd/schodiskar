@@ -10,7 +10,9 @@
   const ALL = 'rovne L U Lp Up tocite';
   const FIELDS = {
     fDims: [
-      ['H', 'Konštrukčná výška H', 'mm'],
+      ['H', 'Konštrukčná výška H', 'mm', ALL, 'čistá podlaha – čistá podlaha'],
+      ['podlahaDole', 'Nášľapná vrstva dole', 'mm', ALL, 'podlaha pri nástupe'],
+      ['podlahaHore', 'Nášľapná vrstva hore', 'mm', ALL, 'podlaha pri výstupe'],
       ['N', 'Počet výšok N', 'ks', ALL, '0 = automaticky'],
       ['W', 'Šírka ramena W', 'mm', 'rovne L U Lp Up'],
       ['L', 'Dĺžka L', 'mm', 'rovne'],
@@ -34,6 +36,16 @@
       ['hrubkaPodst', 'Hrúbka podstupnice', 'mm'],
       ['sirkaSchodnice', 'Šírka schodnice', 'mm'],
       ['hrubkaSchodnice', 'Hrúbka schodnice', 'mm']
+    ],
+    fStrop: [
+      ['strop', 'Hrúbka stropu', 'mm', 'rovne L U Lp Up', 'vrátane podlahy hore'],
+      ['otvor', 'Dĺžka otvoru v strope', 'mm', 'rovne L U Lp Up', 'po výstupnej čiare od výstupu; 0 = len vypočítať']
+    ],
+    fMat: [
+      ['vyskaZabradlia', 'Výška zábradlia', 'mm', ALL, 'madlo nad hranou stupňa'],
+      ['doskaDlzka', 'Doska – dĺžka', 'mm', ALL, 'v smere vlákien'],
+      ['doskaSirka', 'Doska – šírka', 'mm'],
+      ['rez', 'Šírka rezu', 'mm']
     ],
     fLim: [
       ['lim.hMin', 'Výška stupňa min.', 'mm'],
@@ -152,7 +164,7 @@
       setK(k, n);
     } else setK(k, inp.value);
     changed(false);
-    if (commit) syncForm(true);
+    if (commit) { syncForm(true); commitHist(); }
   }
 
   function syncForm(onlyBlurred) {
@@ -167,10 +179,12 @@
     $('#dirRow').hidden = input.typ === 'rovne';
     $('#dirRow').querySelector('span').textContent = input.typ === 'tocite' ? 'Smer otáčania' : 'Zákruta';
     document.querySelectorAll('.fld').forEach(f => { f.hidden = f.dataset.types.split(' ').indexOf(input.typ) < 0; });
+    document.querySelectorAll('.grp[data-auto]').forEach(g => { g.hidden = !g.querySelector('.fld:not([hidden])'); });
   }
 
   let renderT = null;
   function changed(full) {
+    if (full) commitHist();
     store();
     if (full) syncForm();
     else syncForm(true);
@@ -202,6 +216,10 @@
       h += kpi('Sklon', fmt(res.sklon, 1) + '°');
       if (res.najuzsiKlin) h += kpi('Najužší klin', fmt(res.najuzsiKlin.hodnota, 1) + ' <small>mm, st. ' + res.najuzsiKlin.stupen + '</small>', chk('klin'));
       if (res.podchod != null) h += kpi('Podchod', fmt(res.podchod) + ' <small>mm</small>', chk('podchod'));
+      if (res.strop) h += input.otvor > 0
+        ? kpi('Podchod pod stropom', fmt(res.strop.svetla) + ' <small>mm</small>', chk('podchodStrop'))
+        : kpi('Otvor v strope', (isFinite(res.strop.otvorMin) ? '≥ ' + fmt(Math.ceil(res.strop.otvorMin)) : '—') + ' <small>mm</small>');
+      if (res.podlaha && (res.podlaha.dole || res.podlaha.hore)) h += kpi('Hrubá výška', fmt(res.podlaha.hruba) + ' <small>mm</small>');
     } else h += kpi('Výpočet', '—');
     const st = { ok: 'OK', pozor: 'POZOR', chyba: 'CHYBA' }[res.stav];
     h += '<div class="status ' + res.stav + '">' + st + '</div>';
@@ -238,7 +256,8 @@
     if (editing) svgStr = svgStr.replace('</svg>', handlesSVG(dr.ts) + '</svg>');
     v.innerHTML = '<div class="canvas' + (edDrag ? ' edit' : '') + '" id="cv">' + svgStr + '</div>' +
       (legend ? '<div class="legend"><span><i style="border-color:#c2410c;border-top-style:dashed"></i>výstupná čiara</span><span><i style="border-color:#1d2733"></i>výstupná hrana (s presahom)</span><span><i style="border-color:#64748b;border-top-style:dashed"></i>podstupnica</span><span><i style="border-color:#2f7d4f"></i>kóty pri stene</span>' +
-        (res.upravy && res.upravy.pocet ? '<span><i style="border-color:#2563eb"></i>upravená hrana</span>' : '') + '</div>' : '') +
+        (res.upravy && res.upravy.pocet ? '<span><i style="border-color:#2563eb"></i>upravená hrana</span>' : '') +
+        (res.strop ? '<span><i style="border-color:#7c3aed;border-top-style:dashed"></i>' + (input.otvor > 0 ? 'hrana stropu' : 'min. otvor v strope') + '</span>' : '') + '</div>' : '') +
       '<div class="zoomhint">' + (plan ? 'klik na stupeň = úprava · ' : '') + 'koliesko = zoom · ťahanie = posun · dvojklik = celé</div>' +
       (editing ? editPanel() : '');
     const cv = $('#cv'), svg = cv.querySelector('svg');
@@ -282,14 +301,14 @@
     if (!e.ds && !e.dt) delete up.hrany[i]; else up.hrany[i] = e;
     if (Object.keys(up.hrany).length) input.upravy = up; else delete input.upravy;
     store();
-    if (!edDrag) return recompute();
+    if (!edDrag) { commitHist(); return recompute(); }
     if (!edDrag.raf) edDrag.raf = requestAnimationFrame(() => { if (edDrag) edDrag.raf = 0; recompute(); });
   }
   function clearEdits(idx) {
     if (!input.upravy) return;
     if (idx) { for (const i of idx) delete input.upravy.hrany[i]; if (!Object.keys(input.upravy.hrany).length) delete input.upravy; }
     else delete input.upravy;
-    store(); recompute();
+    store(); commitHist(); recompute();
   }
 
   function handlesSVG(ts) {
@@ -342,6 +361,7 @@
       window.removeEventListener('pointercancel', up);
       if (edDrag && edDrag.raf) cancelAnimationFrame(edDrag.raf);
       edDrag = null;
+      commitHist();
       recompute();
     };
     window.addEventListener('pointermove', move);
@@ -525,7 +545,7 @@
       const el = e.target.closest('[data-viz]');
       if (!el) return;
       input.viz = Object.assign({}, S, input.viz || {}, { [el.dataset.viz]: el.type === 'checkbox' ? el.checked : el.value });
-      store();
+      store(); commitHist();
       const sw = el.parentNode.querySelector('.sw');
       if (sw) sw.style.background = VZ.swatch(el.value);
       const S2 = VZ.settings(input.viz);
@@ -601,8 +621,41 @@
     h += '<tr class="sum"><td></td><td class="n">' + b.sucty.podstKs + ' ks</td><td></td><td></td><td class="n">' + fmt(b.sucty.podstObjem, 3) + ' m³</td></tr></tbody></table>';
     h += '<h3>Schodnice</h3><table class="tb"><thead><tr><th>Názov</th><th>Stupne</th><th class="n">Prírez d × š × t</th><th class="n">Objem</th></tr></thead><tbody>';
     for (const s of b.schodnice) h += '<tr><td>' + s.nazov + '</td><td>' + s.stupne + '</td><td class="n">' + fmt(s.dlzka) + ' × ' + fmt(s.sirka) + ' × ' + fmt(s.hrubka) + '</td><td class="n">' + fmt(s.objem, 3) + ' m³</td></tr>';
-    h += '</tbody></table><p class="note">Prírezy stupňov sú obdĺžniky natočené podľa nástupnej hrany (vrátane presahu), bez prídavkov na opracovanie. Podstupnica: výška = h − hrúbka stupňa. Schodnica: orientačný prírez rozvinutého tvaru.</p></div>';
-    v.innerHTML = h;
+    h += '</tbody></table><p class="note">Prírezy stupňov sú obdĺžniky natočené podľa nástupnej hrany (vrátane presahu), bez prídavkov na opracovanie. Podstupnica: výška = h − hrúbka stupňa; prvá siaha na hrubú podlahu, posledná po hrubú podlahu hore. Schodnica: orientačný prírez rozvinutého tvaru.</p>';
+
+    // zábradlie
+    const zt = (input.viz && C.ZABRADLIE[input.viz.zabradlie]) ? input.viz.zabradlie : 'ocel';
+    h += '<h3>Zábradlie</h3><label class="selz">Druh <select id="selZabr">' + Object.keys(C.ZABRADLIE).map(k => '<option value="' + k + '"' + (k === zt ? ' selected' : '') + '>' + C.ZABRADLIE[k] + '</option>').join('') + '</select></label>';
+    if (b.zabradlie) {
+      h += '<table class="tb"><thead><tr><th>Položka</th><th class="n">Ks</th><th class="n">Dĺžka / rozmer [mm]</th><th class="n">Spolu</th><th>Poznámka</th></tr></thead><tbody>';
+      for (const z of b.zabradlie.polozky) h += '<tr><td>' + esc(z.nazov) + '</td><td class="n">' + z.ks + '</td><td class="n">' + z.rozmer + '</td><td class="n">' + z.spolu + '</td><td>' + esc(z.pozn || '') + '</td></tr>';
+      h += '</tbody></table><p class="note">Madlo ' + fmt(b.zabradlie.HR) + ' mm nad hranami stupňov, na ' + (input.typ === 'tocite' ? 'vonkajšej' : 'vnútornej (voľnej)') + ' strane. Rovnaké rozmiestnenie ako v 3D vizualizácii.</p>';
+    } else h += '<p class="note">Bez zábradlia.</p>';
+
+    // rozloženie na dosky
+    h += '<h3>Rozloženie prírezov na dosky</h3>';
+    if (!b.dosky.length) h += '<p class="note">Zadajte rozmer dosky v ľavom paneli.</p>';
+    else {
+      h += '<p class="note">Doska ' + fmt(input.doskaDlzka) + ' × ' + fmt(input.doskaSirka) + ' mm, rez ' + fmt(input.rez) + ' mm. Obdĺžnikové prírezy bez otáčania (vlákna po dĺžke dosky). ' +
+        b.dosky.map(g => '<b>' + fmt(g.hrubka) + ' mm</b> (' + g.nazvy.join(', ') + '): ' + g.boards.length + ' ks' + (g.nevojde.length ? ', <span class="bad">nevojde ' + g.nevojde.map(q => q.n + ' ' + fmt(q.w) + '×' + fmt(q.h)).join(', ') + '</span>' : '')).join(' · ') + '</p><div class="boards">';
+      for (const g of b.dosky) g.boards.forEach((bd, k) => {
+        const D = input.doskaDlzka, S = input.doskaSirka, f = Math.max(D, S) / 100;
+        let svg = '<svg viewBox="0 0 ' + D + ' ' + S + '" class="board" preserveAspectRatio="xMinYMin meet"><rect x="0" y="0" width="' + D + '" height="' + S + '" class="bd"/>';
+        for (const q of bd.parts) {
+          svg += '<rect x="' + q.x + '" y="' + q.y + '" width="' + q.w + '" height="' + q.h + '" class="pc"><title>' + q.n + ': ' + fmt(q.w) + ' × ' + fmt(q.h) + ' mm (x ' + fmt(q.x) + ', y ' + fmt(q.y) + ')</title></rect>';
+          const fs = Math.min(3.2 * f, q.h * 0.42, q.w / Math.max(2, q.n.length) * 1.3);
+          if (fs > 1.2 * f) svg += '<text x="' + (q.x + q.w / 2) + '" y="' + (q.y + q.h / 2) + '" font-size="' + fs + '" text-anchor="middle" dominant-baseline="central">' + q.n + '</text>';
+        }
+        svg += '</svg>';
+        h += '<figure><figcaption><b>' + fmt(g.hrubka) + ' mm · doska ' + (k + 1) + '</b><span>využitie ' + fmt(bd.vyuzitie * 100) + ' %</span></figcaption>' + svg + '</figure>';
+      });
+      h += '</div>';
+    }
+    v.innerHTML = h + '</div>';
+    $('#selZabr').addEventListener('change', e => {
+      input.viz = Object.assign({}, input.viz || {}, { zabradlie: e.target.value });
+      store(); commitHist(); renderView();
+    });
   }
 
   function viewChecks(v) {
@@ -702,8 +755,55 @@
     });
   }
 
+  // ---------------------------------------------------------------- späť / znova
+  let past = [], future = [], histBase = null;
+  const snap = () => JSON.stringify(input);
+  function commitHist() {
+    const cur = snap();
+    if (histBase === null || cur === histBase) { histBase = cur; return updHist(); }
+    past.push(histBase);
+    if (past.length > 200) past.shift();
+    future = [];
+    histBase = cur;
+    updHist();
+  }
+  function restoreHist(str) {
+    input = C.normalize(JSON.parse(str));
+    histBase = snap();
+    store(); syncForm(); recompute(); updHist();
+  }
+  function undo() {
+    commitHist(); // rozpísané pole sa uloží ako krok
+    if (!past.length) return toast('Nie je čo vrátiť.');
+    future.push(histBase);
+    restoreHist(past.pop());
+  }
+  function redo() {
+    if (!future.length) return;
+    past.push(histBase);
+    restoreHist(future.pop());
+  }
+  function updHist() {
+    const u = $('#btnUndo'), r = $('#btnRedo');
+    if (u) u.disabled = !past.length && snap() === histBase;
+    if (r) r.disabled = !future.length;
+  }
+  document.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const k = e.key.toLowerCase();
+    if (k !== 'z' && k !== 'y') return;
+    const t = e.target;
+    if (t && t.matches && t.matches('#projekt, .fld.wide input, textarea')) return; // text: natívne späť
+    if (edDrag) return;
+    e.preventDefault();
+    if (k === 'y' || e.shiftKey) redo(); else undo();
+  });
+
   buildForm();
   bindActions();
   syncForm();
   recompute();
+  commitHist();
+  $('#btnUndo').addEventListener('click', undo);
+  $('#btnRedo').addEventListener('click', redo);
 })();

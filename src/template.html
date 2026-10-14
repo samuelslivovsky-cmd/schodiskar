@@ -24,6 +24,9 @@
     <button id="btnOpen" class="btn ghost" title="Načítať projekt (JSON)">Otvoriť</button>
     <button id="btnSave" class="btn ghost" title="Uložiť projekt (JSON)">Uložiť</button>
     <span class="sep"></span>
+    <button id="btnUndo" class="btn ghost icon" title="Späť (Ctrl+Z)" aria-label="Späť" disabled>↶</button>
+    <button id="btnRedo" class="btn ghost icon" title="Znova (Ctrl+Y)" aria-label="Znova" disabled>↷</button>
+    <span class="sep"></span>
     <button id="btnPdf" class="btn primary" title="PDF A3 na šírku">PDF</button>
     <button id="btnDxf" class="btn" title="DXF R12 v mm">DXF</button>
     <button id="btnCsv" class="btn" title="Rozpis materiálu pre Excel">CSV</button>
@@ -47,6 +50,8 @@
     <section class="grp" id="grpDims"><h2>Rozmery</h2><div class="fields" id="fDims"></div></section>
     <section class="grp" id="grpWalk"><h2>Výstupná čiara a vyrovnanie</h2><div class="fields" id="fWalk"></div><div class="upinfo" id="upInfo" hidden></div></section>
     <section class="grp"><h2>Konštrukcia</h2><div class="fields" id="fCons"></div></section>
+    <section class="grp" data-auto><h2>Strop a podchodná výška</h2><div class="fields" id="fStrop"></div></section>
+    <section class="grp"><h2>Zábradlie a dosky</h2><div class="fields" id="fMat"></div></section>
     <details class="grp" id="grpLim">
       <summary><h2>Limity</h2><span class="muted">upraviteľné</span></summary>
       <div class="fields" id="fLim"></div>

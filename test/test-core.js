@@ -234,6 +234,54 @@ console.log('— špecifické kontroly');
   ok(C.compute({ upravy: { N, typ: 'L', hrany: { 5: { ds: base.b + 10 } } } }).errors.length > 0, 'úpravy: prekríženie je chyba');
   ok(!C.normalize({ upravy: { N, typ: 'L', hrany: { 2: { ds: 0, dt: 0 } } } }).upravy, 'úpravy: nulové sa zahodia');
 }
+{
+  // nášľapné vrstvy
+  const a = C.compute({ typ: 'rovne' }), r = C.compute({ typ: 'rovne', podlahaDole: 20, podlahaHore: 15 });
+  near(r.h, a.h, 1e-9, 'podlahy: h sa nemení (H je čistá výška)');
+  near(r.podlaha.hruba, 2800 + 20 - 15, 1e-9, 'podlahy: hrubá výška');
+  near(r.risers[0].vyska, r.h - 40 + 20, 1e-9, 'podlahy: prvá podstupnica po hrubú podlahu');
+  near(r.risers[r.N - 1].vyska, r.h - 15, 1e-9, 'podlahy: posledná podstupnica');
+  near(r.risers[1].vyska, r.h - 40, 1e-9, 'podlahy: ostatné podstupnice');
+  const sh = r.unfold.vnutorna.tvary[0];
+  near(Math.min.apply(null, sh.poly.map(p => p.y)), -20, 1e-6, 'podlahy: schodnica stojí na hrubej podlahe');
+}
+{
+  // otvor v strope: pri potrebnej dĺžke je podchod presne na limite
+  for (const typ of ['rovne', 'L', 'U', 'Lp', 'Up']) {
+    const r0 = C.compute({ typ });
+    const om = r0.strop.otvorMin;
+    ok(om > 0 && om < r0.Lw, typ + ': potrebný otvor v rozsahu (' + om + ')');
+    const r1 = C.compute({ typ, otvor: om });
+    near(r1.strop.svetla, 2100, 1e-6, typ + ': podchod pri potrebnom otvore');
+    ok(r1.checks.find(c => c.id === 'podchodStrop').ok, typ + ': kontrola OK');
+    const r2 = C.compute({ typ, otvor: om - 300 });
+    ok(!r2.checks.find(c => c.id === 'podchodStrop').ok, typ + ': krátky otvor nevyhovuje');
+  }
+  ok(!C.compute({ typ: 'tocite' }).strop, 'točité: bez otvoru (vlastný podchod)');
+}
+{
+  // zábradlie a rozloženie na dosky
+  const r = C.compute({ typ: 'L' });
+  for (const t of ['ocel', 'nerez', 'sklo', 'drevo']) {
+    const R = C.railing(r, t);
+    ok(R && R.madlo > Math.hypot(r.unfold.vnutorna.dlzka * 0.5, r.input.H) && R.posts.length >= 2, 'zábradlie ' + t);
+    ok(R.posts.concat(R.rods).every(q => q.z1 > q.z0), 'zábradlie ' + t + ': kladné dĺžky');
+  }
+  ok(C.railing(r, 'ziadne') === null, 'bez zábradlia');
+  const pcs = [{ n: 'a', w: 1000, h: 500 }, { n: 'b', w: 1000, h: 500 }, { n: 'c', w: 900, h: 690 }, { n: 'd', w: 5000, h: 100 }];
+  const n = C.nest(pcs, 3000, 1200, 4);
+  ok(n.nevojde.length === 1 && n.nevojde[0].n === 'd', 'dosky: príliš dlhý dielec');
+  ok(n.boards.length === 1, 'dosky: zmestí sa na jednu');
+  const all = n.boards[0].parts;
+  ok(all.every(p => p.x >= 0 && p.y >= 0 && p.x + p.w <= 3000 + 1e-6 && p.y + p.h <= 1200 + 1e-6), 'dosky: vnútri dosky');
+  let overlap = false;
+  for (let i = 0; i < all.length; i++) for (let k = i + 1; k < all.length; k++) {
+    const A = all[i], B = all[k];
+    if (A.x < B.x + B.w + 4 - 1e-6 && B.x < A.x + A.w + 4 - 1e-6 && A.y < B.y + B.h + 4 - 1e-6 && B.y < A.y + A.h + 4 - 1e-6 &&
+      !(A.x + A.w + 4 <= B.x + 1e-6 || B.x + B.w + 4 <= A.x + 1e-6 || A.y + A.h + 4 <= B.y + 1e-6 || B.y + B.h + 4 <= A.y + 1e-6)) overlap = true;
+  }
+  ok(!overlap, 'dosky: dielce sa neprekrývajú (vrátane rezu)');
+}
 
 console.log('\n' + passes + ' OK, ' + fails + ' chýb');
 process.exit(fails ? 1 : 0);
