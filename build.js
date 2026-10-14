@@ -13,7 +13,8 @@ const scripts = [
   ['Výkresy', rd('src/draw.js')],
   ['Exporty', rd('src/export.js')],
   ['3D vizualizácia', rd('src/viz3d.js')],
-  ['Rozhranie', rd('src/app.js')]
+  ['Rozhranie', rd('src/app.js')],
+  ['Návod', rd('src/tour.js')]
 ];
 let html = rd('src/template.html');
 html = html.replace('/*STYLE*/', () => rd('src/style.css'));

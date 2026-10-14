@@ -106,6 +106,7 @@
     saveT = setTimeout(() => { try { localStorage.setItem(STORE, JSON.stringify(input)); } catch (e) { /* ignorovať */ } }, 250);
   }
 
+  const SPIN = '<span class="spin" aria-hidden="true"><button type="button" tabindex="-1" data-d="1">▲</button><button type="button" tabindex="-1" data-d="-1">▼</button></span>';
   const getK = k => k.indexOf('lim.') === 0 ? input.lim[k.slice(4)] : input[k];
   const setK = (k, v) => { if (k.indexOf('lim.') === 0) input.lim[k.slice(4)] = v; else input[k] = v; };
 
@@ -131,8 +132,8 @@
       el.innerHTML = list.map(([k, label, unit, types, hint, wide]) =>
         '<div class="fld' + (wide ? ' wide' : '') + '" data-types="' + (types || ALL) + '">' +
         '<label for="in-' + k + '">' + label + (hint ? '<small>' + hint + '</small>' : '') + '</label>' +
-        '<div class="inp"><input id="in-' + k + '" data-key="' + k + '" ' + (wide ? '' : 'inputmode="decimal" ') + 'autocomplete="off" spellcheck="false">' +
-        (unit ? '<span class="u">' + unit + '</span>' : '') + '</div></div>').join('');
+        '<div class="inp' + (wide ? '' : ' sp') + '"><input id="in-' + k + '" data-key="' + k + '" ' + (wide ? '' : 'inputmode="decimal" data-min="0" data-step="' + (['N', 'nb'].includes(k) ? 1 : 10) + '" ') + 'autocomplete="off" spellcheck="false">' +
+        (unit ? '<span class="u">' + unit + '</span>' : '') + (wide ? '' : SPIN) + '</div></div>').join('');
     }
     document.querySelectorAll('input[data-key]').forEach(inp => {
       inp.addEventListener('input', () => onField(inp));
@@ -379,8 +380,8 @@
     const tr = res.treads && res.treads[sel - 1];
     const field = (i, k, label, dot) => {
       const dis = k === 'ds' ? edgeFixedS(i) : innerFixed();
-      return '<div class="row"><label for="ed-' + i + k + '"><i style="background:' + dot + '"></i>' + label + '</label><div class="inp"><input id="ed-' + i + k + '" data-e="' + i + '" data-k="' + k + '" inputmode="decimal" autocomplete="off" value="' + (dis ? '—' : fmt((E[i] && E[i][k]) || 0)) + '"' +
-        (dis ? ' disabled title="' + (k === 'ds' ? 'Prvá a posledná hrana sú pevné (podlahy).' : 'Vnútorná hrana je bod.') + '"' : '') + '><span class="u">mm</span></div></div>';
+      return '<div class="row"><label for="ed-' + i + k + '"><i style="background:' + dot + '"></i>' + label + '</label><div class="inp sp"><input id="ed-' + i + k + '" data-e="' + i + '" data-k="' + k + '" data-step="1" inputmode="decimal" autocomplete="off" value="' + (dis ? '—' : fmt((E[i] && E[i][k]) || 0)) + '"' +
+        (dis ? ' disabled title="' + (k === 'ds' ? 'Prvá a posledná hrana sú pevné (podlahy).' : 'Vnútorná hrana je bod.') + '"' : '') + '><span class="u">mm</span>' + (dis ? '' : SPIN) + '</div></div>';
     };
     const edge = (i, title) => {
       const has = E[i] && (E[i].ds || E[i].dt);
@@ -630,7 +631,7 @@
 
     // zábradlie
     const zt = (input.viz && C.ZABRADLIE[input.viz.zabradlie]) ? input.viz.zabradlie : 'ocel';
-    h += '<h3>Zábradlie</h3><label class="selz">Druh <select id="selZabr">' + Object.keys(C.ZABRADLIE).map(k => '<option value="' + k + '"' + (k === zt ? ' selected' : '') + '>' + C.ZABRADLIE[k] + '</option>').join('') + '</select></label>';
+    h += '<h3 id="bomExtra">Zábradlie</h3><label class="selz">Druh <select id="selZabr">' + Object.keys(C.ZABRADLIE).map(k => '<option value="' + k + '"' + (k === zt ? ' selected' : '') + '>' + C.ZABRADLIE[k] + '</option>').join('') + '</select></label>';
     if (b.zabradlie) {
       h += '<table class="tb"><thead><tr><th>Položka</th><th class="n">Ks</th><th class="n">Dĺžka / rozmer [mm]</th><th class="n">Spolu</th><th>Poznámka</th></tr></thead><tbody>';
       for (const z of b.zabradlie.polozky) h += '<tr><td>' + esc(z.nazov) + '</td><td class="n">' + z.ks + '</td><td class="n">' + z.rozmer + '</td><td class="n">' + z.spolu + '</td><td>' + esc(z.pozn || '') + '</td></tr>';
@@ -760,10 +761,49 @@
     });
   }
 
+  // ---------------------------------------------------------------- šípky ▲▼ pri číselných poliach (podržaním opakujú)
+  let spin = null;
+  function spinTick() {
+    const inp = spin && document.getElementById(spin.id);
+    if (!inp || inp.disabled) return;
+    const st = (+inp.dataset.step || 10) * (spin.shift ? 10 : 1);
+    let v = Math.round(((parseNum(inp.value) || 0) + spin.d * st) * 100) / 100;
+    if (inp.dataset.min != null) v = Math.max(+inp.dataset.min, v);
+    inp.value = String(v).replace('.', ',');
+    if (inp.dataset.key) onField(inp);
+    else setEdit(+inp.dataset.e, inp.dataset.k, v);
+  }
+  function spinStop() {
+    if (!spin) return;
+    clearTimeout(spin.t);
+    const id = spin.id;
+    spin = null;
+    commitHist();
+    syncForm(true);
+    const inp = document.getElementById(id);
+    if (inp && inp.dataset.key) inp.blur();
+  }
+  document.addEventListener('pointerdown', e => {
+    const b = e.target.closest && e.target.closest('.spin button');
+    if (!b || e.button !== 0) return;
+    const inp = b.closest('.inp').querySelector('input');
+    if (!inp || inp.disabled) return;
+    e.preventDefault(); e.stopPropagation();
+    spinStop();
+    spin = { id: inp.id, d: +b.dataset.d, shift: e.shiftKey, t: 0 };
+    spinTick();
+    const rep = delay => { spin.t = setTimeout(() => { if (!spin) return; spinTick(); rep(70); }, delay); };
+    rep(420);
+  }, true);
+  window.addEventListener('pointerup', spinStop);
+  window.addEventListener('pointercancel', spinStop);
+  window.addEventListener('blur', spinStop);
+
   // ---------------------------------------------------------------- späť / znova
   let past = [], future = [], histBase = null;
   const snap = () => JSON.stringify(input);
   function commitHist() {
+    if (spin) return; // podržaná šípka = jeden krok po pustení
     const cur = snap();
     if (histBase === null || cur === histBase) { histBase = cur; return updHist(); }
     past.push(histBase);

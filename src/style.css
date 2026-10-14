@@ -140,7 +140,7 @@ svg.vykres .hd.s:hover, svg.vykres .hd.s.on { fill: #7c2d12; }
 .canvas.edit, .canvas.edit .hd { cursor: grabbing; }
 
 /* úprava stupňa */
-.edp { position: absolute; top: 12px; left: 12px; width: 300px; background: #ffffffef; border-radius: 10px; padding: 10px 12px 12px; box-shadow: 0 6px 20px #0002; backdrop-filter: blur(6px); font-size: 13px; z-index: 2; }
+.edp { position: absolute; top: 12px; left: 12px; width: 330px; background: #ffffffef; border-radius: 10px; padding: 10px 12px 12px; box-shadow: 0 6px 20px #0002; backdrop-filter: blur(6px); font-size: 13px; z-index: 2; }
 .edp header { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
 .edp header b { flex: 1; text-align: center; font-size: 14px; }
 .edp header button, .edp footer button { border: 1px solid var(--line-2); background: #fff; border-radius: 6px; cursor: pointer; color: var(--ink-2); font: 600 12.5px var(--sans); padding: 4px 9px; }
@@ -271,3 +271,33 @@ svg.board .bd { fill: #f8f8f6; stroke: #5b6470; stroke-width: 1.2px; vector-effe
 svg.board .pc { fill: #f4e9d6; stroke: #8a5a2b; stroke-width: 1px; vector-effect: non-scaling-stroke; }
 svg.board .pc:hover { fill: var(--sel); }
 svg.board text { fill: #3b2a18; font-family: var(--sans); font-weight: 600; pointer-events: none; }
+
+/* šípky pri číselných poliach */
+.inp.sp input { padding-right: 50px; }
+.inp.sp .u { right: 28px; }
+.spin { position: absolute; top: 2px; bottom: 2px; right: 2px; width: 20px; display: flex; flex-direction: column; gap: 1px; }
+.spin button { flex: 1; border: 0; border-radius: 3px; background: #f1f3f6; color: var(--muted); font-size: 7.5px; line-height: 1; padding: 0; cursor: pointer; user-select: none; touch-action: manipulation; }
+.spin button:hover { background: #e3e7ec; color: var(--ink); }
+.spin button:active { background: var(--accent); color: #fff; }
+.edp .row { grid-template-columns: 1fr 112px; }
+.edp .inp.sp input { padding-right: 50px; }
+
+/* interaktívny návod */
+.tour { position: fixed; inset: 0; z-index: 50; pointer-events: none; }
+.tour.dim { background: #0f172a8c; }
+.tour-hole { position: fixed; border-radius: 10px; box-shadow: 0 0 0 9999px #0f172a8c, 0 0 0 3px var(--accent-2); transition: left .25s, top .25s, width .25s, height .25s; pointer-events: none; }
+.tour.interactive .tour-hole { animation: tourPulse 1.4s ease-in-out infinite; }
+@keyframes tourPulse { 50% { box-shadow: 0 0 0 9999px #0f172a8c, 0 0 0 6px var(--accent-2); } }
+.tour-pop { position: fixed; width: min(340px, calc(100vw - 24px)); background: #fff; border-radius: 12px; padding: 14px 16px 12px; box-shadow: 0 16px 40px #0006; pointer-events: auto; font-size: 13.5px; color: var(--ink); }
+.tour-pop h4 { margin: 2px 0 6px; font-size: 15.5px; }
+.tour-pop p { margin: 0 0 8px; line-height: 1.45; color: var(--ink-2); }
+.tour-n { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: .05em; }
+.tour-wait { color: var(--accent) !important; font-weight: 600; font-size: 12.5px; }
+.tour-pop footer { display: flex; gap: 6px; align-items: center; margin-top: 10px; }
+.tour-pop footer span { flex: 1; }
+.tour-pop button { border: 1px solid var(--line-2); background: #fff; border-radius: 7px; padding: 6px 12px; font: 600 13px var(--sans); cursor: pointer; color: var(--ink-2); }
+.tour-pop button:hover { border-color: var(--accent); color: var(--ink); }
+.tour-pop .tour-next { background: var(--accent-2); border-color: var(--accent-2); color: #1f2a37; }
+.tour-pop .tour-next:hover { background: #fbbf24; }
+.tour-pop .tour-skip { border: 0; padding: 6px 4px; color: var(--muted); font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { .tour-hole { transition: none; } .tour.interactive .tour-hole { animation: none; } }
