@@ -183,6 +183,7 @@
     try { res = C.compute(input); }
     catch (e) { res = { input, errors: ['Neočakávaná chyba výpočtu: ' + e.message], warnings: [], checks: [], stav: 'chyba' }; console.error(e); }
     renderSummary();
+    renderUpInfo();
     renderView();
   }
 
@@ -195,7 +196,8 @@
     if (res.N) {
       h += kpi('Výšky N × h', res.N + ' × ' + fmt(res.h, 1) + ' <small>mm' + (res.autoN ? ', auto' : '') + '</small>', chk('h'));
       h += kpi('Stupne', (res.N - 1) + (res.podesta ? ' <small>vr. podesty</small>' : ''));
-      h += kpi('Šírka b', fmt(res.b, 1) + ' <small>mm</small>', chk('b'));
+      const bs = res.upravy && res.upravy.ds && res.treads ? res.treads.filter(t => t.kind === 'stupen').map(t => t.sirky.vystup) : [];
+      h += kpi('Šírka b', (bs.length ? fmt(Math.min.apply(null, bs), 1) + '–' + fmt(Math.max.apply(null, bs), 1) : fmt(res.b, 1)) + ' <small>mm</small>', chk('b') || chk('brov'));
       h += kpi('2h + b', fmt(res.krok, 1) + ' <small>mm</small>', chk('k'));
       h += kpi('Sklon', fmt(res.sklon, 1) + '°');
       if (res.najuzsiKlin) h += kpi('Najužší klin', fmt(res.najuzsiKlin.hodnota, 1) + ' <small>mm, st. ' + res.najuzsiKlin.stupen + '</small>', chk('klin'));
@@ -229,19 +231,195 @@
 
   function viewDrawing(v, dr, key, legend) {
     if (!dr.bbox) return noData(v);
-    v.innerHTML = '<div class="canvas" id="cv">' + D.toSVG(dr.items, dr.bbox) + '</div>' +
-      (legend ? '<div class="legend"><span><i style="border-color:#c2410c;border-top-style:dashed"></i>výstupná čiara</span><span><i style="border-color:#1d2733"></i>výstupná hrana (s presahom)</span><span><i style="border-color:#64748b;border-top-style:dashed"></i>podstupnica</span><span><i style="border-color:#2f7d4f"></i>kóty pri stene</span></div>' : '') +
-      '<div class="zoomhint">koliesko = zoom · ťahanie = posun · dvojklik = celé</div>';
+    const plan = key === 'plan';
+    if (plan && sel && !edDrag && !(res.N && sel <= res.N - 1)) sel = null;
+    const editing = plan && sel && res.edges && sel <= res.N - 1;
+    let svgStr = D.toSVG(dr.items, dr.bbox);
+    if (editing) svgStr = svgStr.replace('</svg>', handlesSVG(dr.ts) + '</svg>');
+    v.innerHTML = '<div class="canvas' + (edDrag ? ' edit' : '') + '" id="cv">' + svgStr + '</div>' +
+      (legend ? '<div class="legend"><span><i style="border-color:#c2410c;border-top-style:dashed"></i>výstupná čiara</span><span><i style="border-color:#1d2733"></i>výstupná hrana (s presahom)</span><span><i style="border-color:#64748b;border-top-style:dashed"></i>podstupnica</span><span><i style="border-color:#2f7d4f"></i>kóty pri stene</span>' +
+        (res.upravy && res.upravy.pocet ? '<span><i style="border-color:#2563eb"></i>upravená hrana</span>' : '') + '</div>' : '') +
+      '<div class="zoomhint">' + (plan ? 'klik na stupeň = úprava · ' : '') + 'koliesko = zoom · ťahanie = posun · dvojklik = celé</div>' +
+      (editing ? editPanel() : '');
     const cv = $('#cv'), svg = cv.querySelector('svg');
     enableZoom(cv, svg, key);
-    if (key === 'plan') {
+    if (plan) {
       svg.addEventListener('mousemove', e => {
+        if (edDrag) return;
         const p = e.target.closest && e.target.closest('.hov');
         if (p) showTip(+p.dataset.n, e.clientX, e.clientY); else hideTip();
       });
       svg.addEventListener('mouseleave', hideTip);
+      // klik (bez posunu výkresu) na stupeň = výber na úpravu
+      let down = null;
+      svg.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY }; });
+      svg.addEventListener('click', e => {
+        if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4) return;
+        const p = e.target.closest && e.target.closest('.hov');
+        if (p) { sel = +p.dataset.n; hideTip(); renderView(); }
+      });
+      svg.querySelectorAll('.hov').forEach(p => p.classList.toggle('hl', +p.dataset.n === sel));
+      svg.querySelectorAll('.hd').forEach(c => c.addEventListener('pointerdown', startEdgeDrag));
+      if (editing) bindEditPanel(v.querySelector('.edp'));
     }
   }
+
+  // ---------------------------------------------------------------- ručná úprava stupňov
+  let sel = null, edDrag = null, edFocus = null;
+  const innerFixed = () => input.typ === 'tocite' && input.Rs <= 0; // vnútorná hrana je bod
+  const edgeFixedS = i => i === 0 || i === res.N - 1;
+
+  function editsFor() {
+    const up = input.upravy;
+    return up && up.N === res.N && up.typ === input.typ ? up.hrany : {};
+  }
+  function setEdit(i, k, val) {
+    val = Math.round(val);
+    const up = input.upravy && input.upravy.N === res.N && input.upravy.typ === input.typ ? input.upravy : { N: res.N, typ: input.typ, hrany: {} };
+    const e = Object.assign({ ds: 0, dt: 0 }, up.hrany[i]);
+    if (e[k] === val) return;
+    e[k] = val;
+    if (!e.ds && !e.dt) delete up.hrany[i]; else up.hrany[i] = e;
+    if (Object.keys(up.hrany).length) input.upravy = up; else delete input.upravy;
+    store();
+    if (!edDrag) return recompute();
+    if (!edDrag.raf) edDrag.raf = requestAnimationFrame(() => { if (edDrag) edDrag.raf = 0; recompute(); });
+  }
+  function clearEdits(idx) {
+    if (!input.upravy) return;
+    if (idx) { for (const i of idx) delete input.upravy.hrany[i]; if (!Object.keys(input.upravy.hrany).length) delete input.upravy; }
+    else delete input.upravy;
+    store(); recompute();
+  }
+
+  function handlesSVG(ts) {
+    const r = 1.7 * ts;
+    let h = '';
+    for (const i of [sel - 1, sel]) {
+      const e = res.edges[i];
+      if (!e) continue;
+      const on = k => edDrag && edDrag.i === i && edDrag.k === k ? ' on' : '';
+      if (!innerFixed()) h += '<circle class="hd' + on('dt') + '" data-e="' + i + '" data-k="dt" cx="' + e.P.x + '" cy="' + (-e.P.y) + '" r="' + r + '"><title>Ťahaním posuniete hranu ' + (i + 1) + ' pri vnútornej hrane</title></circle>';
+      if (!edgeFixedS(i)) h += '<circle class="hd s' + on('ds') + '" data-e="' + i + '" data-k="ds" cx="' + e.W.x + '" cy="' + (-e.W.y) + '" r="' + r + '"><title>Ťahaním posuniete hranu ' + (i + 1) + ' po výstupnej čiare</title></circle>';
+    }
+    return h;
+  }
+
+  // parameter najbližšieho bodu lomenej čiary (vzorky {x, y, s}), len v okolí s0
+  function projectS(samples, pt, s0, win) {
+    let best = null;
+    for (let k = 0; k < samples.length - 1; k++) {
+      const a = samples[k], b = samples[k + 1];
+      if (Math.max(a.s, b.s) < s0 - win || Math.min(a.s, b.s) > s0 + win) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+      const f = L2 > 1e-9 ? Math.min(1, Math.max(0, ((pt.x - a.x) * dx + (pt.y - a.y) * dy) / L2)) : 0;
+      const d = Math.hypot(a.x + dx * f - pt.x, a.y + dy * f - pt.y);
+      if (!best || d < best.d - 1e-9) best = { d, s: a.s + (b.s - a.s) * f };
+    }
+    return best ? best.s : s0;
+  }
+
+  function startEdgeDrag(ev) {
+    ev.stopPropagation(); ev.preventDefault();
+    const i = +ev.target.dataset.e, k = ev.target.dataset.k, e = res.edges[i];
+    // základ = poloha bez vlastnej úpravy; posun = premietnutý parameter − základ
+    edDrag = { i, k, base: k === 'ds' ? e.s - e.ds : e.t - e.dt, s0: k === 'ds' ? e.s : e.t, raf: 0 };
+    hideTip();
+    $('#cv').classList.add('edit');
+    const move = m => {
+      const svg = $('#cv svg');
+      if (!svg || !edDrag) return;
+      const pt = svg.createSVGPoint(); pt.x = m.clientX; pt.y = m.clientY;
+      const q = pt.matrixTransform(svg.getScreenCTM().inverse());
+      const G = res.geom || {};
+      const smp = edDrag.k === 'ds' ? G.walkS : G.innerS;
+      if (!smp) return;
+      setEdit(edDrag.i, edDrag.k, projectS(smp, { x: q.x, y: -q.y }, edDrag.s0, 1500) - edDrag.base);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      if (edDrag && edDrag.raf) cancelAnimationFrame(edDrag.raf);
+      edDrag = null;
+      recompute();
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  }
+
+  function editPanel() {
+    const N = res.N, E = editsFor();
+    const tr = res.treads && res.treads[sel - 1];
+    const field = (i, k, label, dot) => {
+      const dis = k === 'ds' ? edgeFixedS(i) : innerFixed();
+      return '<div class="row"><label for="ed-' + i + k + '"><i style="background:' + dot + '"></i>' + label + '</label><div class="inp"><input id="ed-' + i + k + '" data-e="' + i + '" data-k="' + k + '" inputmode="decimal" autocomplete="off" value="' + (dis ? '—' : fmt((E[i] && E[i][k]) || 0)) + '"' +
+        (dis ? ' disabled title="' + (k === 'ds' ? 'Prvá a posledná hrana sú pevné (podlahy).' : 'Vnútorná hrana je bod.') + '"' : '') + '><span class="u">mm</span></div></div>';
+    };
+    const edge = (i, title) => {
+      const has = E[i] && (E[i].ds || E[i].dt);
+      return '<h5>' + title + ' · hrana ' + (i + 1) + (has ? '<span class="upr">upravená</span>' : '') + '</h5>' +
+        field(i, 'ds', 'Posun po výstupnej čiare', '#c2410c') + field(i, 'dt', 'Posun pri vnútornej hrane', '#2563eb');
+    };
+    const kind = tr && tr.kind === 'podesta' ? 'Podesta ' : 'Stupeň ';
+    const nUp = Object.keys(E).length;
+    return '<div class="edp" role="dialog" aria-label="Úprava stupňa">' +
+      '<header><button data-act="prev" title="Predošlý stupeň"' + (sel <= 1 ? ' disabled' : '') + '>‹</button><b>' + kind + sel + '</b><button data-act="next" title="Ďalší stupeň"' + (sel >= N - 1 ? ' disabled' : '') + '>›</button><button data-act="close" title="Zavrieť (Esc)">×</button></header>' +
+      edge(sel - 1, 'Nástupná hrana') + edge(sel, 'Zadná hrana') +
+      (tr ? '<p class="w">Šírka vnútri / výst. čiara / vonku: <b>' + fmt(tr.sirky.vnutri) + ' / ' + fmt(tr.sirky.vystup) + ' / ' + fmt(tr.sirky.vonku) + '</b> mm' +
+        (tr.sirky.kontrola != null ? '<br>Šírka ' + input.lim.klinVzd + ' mm od vnútra: <b>' + fmt(tr.sirky.kontrola, 1) + '</b> mm' : '') + '</p>' : '') +
+      '<p class="hint">Body na výkrese možno ťahať myšou. Kladný posun = smerom hore po schodoch. Šípky ↑↓ = ±1 mm (Shift ±10).</p>' +
+      '<footer><button data-act="reset">Zrušiť úpravy stupňa</button>' + (nUp ? '<button data-act="resetAll">Zrušiť všetky (' + nUp + ')</button>' : '') + '</footer></div>';
+  }
+
+  function bindEditPanel(p) {
+    p.addEventListener('pointerdown', e => e.stopPropagation());
+    p.addEventListener('wheel', e => e.stopPropagation());
+    p.addEventListener('dblclick', e => e.stopPropagation());
+    p.addEventListener('click', e => {
+      const b = e.target.closest('button[data-act]');
+      if (!b) return;
+      const a = b.dataset.act;
+      if (a === 'prev' && sel > 1) sel--;
+      else if (a === 'next' && sel < res.N - 1) sel++;
+      else if (a === 'close') sel = null;
+      else if (a === 'reset') return clearEdits([sel - 1, sel]);
+      else if (a === 'resetAll') return clearEdits();
+      renderView();
+    });
+    p.querySelectorAll('input[data-k]').forEach(inp => {
+      const commit = () => {
+        const n = parseNum(inp.value);
+        inp.classList.toggle('bad', n === null);
+        if (n !== null) setEdit(+inp.dataset.e, inp.dataset.k, n);
+      };
+      inp.addEventListener('change', commit);
+      inp.addEventListener('focus', () => inp.select());
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { edFocus = inp.id; commit(); return; }
+        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+        e.preventDefault();
+        const st = e.shiftKey ? 10 : 1;
+        inp.value = String((parseNum(inp.value) || 0) + (e.key === 'ArrowUp' ? st : -st));
+        edFocus = inp.id; commit();
+      });
+    });
+    if (edFocus) { const f = document.getElementById(edFocus); edFocus = null; if (f) { f.focus(); f.select(); } }
+  }
+
+  function renderUpInfo() {
+    const el = $('#upInfo');
+    const n = res.upravy ? res.upravy.pocet : 0;
+    const stale = !!input.upravy && !n;
+    el.hidden = !n && !stale;
+    if (el.hidden) return;
+    el.innerHTML = '<span>' + (n ? 'Ručne upravené hrany: <b>' + n + '</b>' : 'Ručné úpravy sa nepoužili') + '</span><button type="button">Zrušiť</button>';
+    el.querySelector('button').onclick = () => clearEdits();
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && sel && tab === 'plan' && !edDrag) { sel = null; renderView(); }
+  });
 
   function enableZoom(cv, svg, key) {
     const vb0 = svg.getAttribute('viewBox').split(' ').map(Number);

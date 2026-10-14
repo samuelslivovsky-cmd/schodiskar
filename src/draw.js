@@ -135,6 +135,8 @@
       items.push(line(last.P, last.Q, { L: 'STUPNE', lw: 'stredna' }));
     }
     for (const r of res.risers || []) items.push(line(r.P, r.Q, { L: 'PODSTUPNICE', dash: '-' }));
+    // ručne upravené hrany (len na obrazovke)
+    if (opt.edits !== false) for (const e of res.edges || []) if (e.ds || e.dt) items.push(line(e.P, e.Q, { L: 'STUPNE', lw: 'hruba', upr: true, noExport: true }));
     if (res.errors && res.errors.length && res.edges) {
       for (const e of res.edges) items.push(line(e.P, e.Q, { L: 'STUPNE', err: true, lw: 'stredna' }));
     }
@@ -380,6 +382,7 @@
         if (it.dash === '-') cls.push('d1'); else if (it.dash === '-.') cls.push('d2');
         if (it.fill) cls.push('f-' + it.fill);
         if (it.err) cls.push('err');
+        if (it.upr) cls.push('upr');
         if (it.hover) cls.push('hov');
         const sw = lwMap[it.lw || 'tenka'];
         out += '<path class="' + cls.join(' ') + '" d="' + svgPath(it.v, it.c) + '" stroke-width="' + sw + '"' +

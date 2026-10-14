@@ -36,7 +36,7 @@ function invariants(name, inp, expectErr) {
     ok(t.poly.every(p => finite(p.x) && finite(p.y) && finite(p.b)), tag + ': súradnice ' + t.n);
     // orientácia CCW aj po zrkadlení
     ok(C.polyArea(t.poly) > 0, tag + ': CCW ' + t.n);
-    if (t.kind === 'stupen' && r.input.typ !== 'Lp' && r.input.typ !== 'Up') near(t.sirky.vystup, r.b, 1e-6, tag + ': b na výstupnej čiare st. ' + t.n);
+    if (t.kind === 'stupen' && r.input.typ !== 'Lp' && r.input.typ !== 'Up' && !r.upravy.ds) near(t.sirky.vystup, r.b, 1e-6, tag + ': b na výstupnej čiare st. ' + t.n);
     if (t.kind === 'stupen' && (r.input.typ === 'Lp' || r.input.typ === 'Up')) near(t.sirky.vystup, r.b, 1e-6, tag + ': b podesta-typ st. ' + t.n);
     sumA += t.plocha;
   }
@@ -211,6 +211,28 @@ console.log('— špecifické kontroly');
   near(e.t[9], 1940, 1e-9, 'equalize: koniec zachovaný');
   near(e.t[0], 0, 1e-9, 'equalize: začiatok zachovaný');
   for (let i = 1; i < 10; i++) ok(e.t[i] > e.t[i - 1], 'equalize: rastie ' + i);
+}
+{
+  // ručné úpravy hrán
+  const base = C.compute({});
+  const N = base.N;
+  const up = { N, typ: 'L', hrany: { 3: { ds: 15 }, 7: { dt: -25 }, 0: { ds: 40, dt: 10 } } };
+  for (const smer of ['vlavo', 'vpravo']) {
+    const r = invariants('L úpravy', { smer, upravy: up });
+    ok(r.upravy.pocet === 3 && r.upravy.ds, 'úpravy: počet a ds [' + smer + ']');
+    near(r.edges[3].s - base.edges[3].s, 15, 1e-6, 'úpravy: ds na výstupnej čiare');
+    near(r.edges[7].t - base.edges[7].t, -25, 1e-6, 'úpravy: dt pri vnútornej hrane');
+    near(r.edges[7].s, base.edges[7].s, 1e-9, 'úpravy: dt nemení výstupnú čiaru');
+    near(r.edges[0].s, 0, 1e-9, 'úpravy: prvá hrana pevná na výstupnej čiare');
+    near(r.edges[0].t, base.edges[0].t + 10, 1e-6, 'úpravy: dt aj na prvej hrane');
+    ok(r.checks.some(c => c.id === 'brov' && !c.ok), 'úpravy: kontrola rovnakej šírky');
+    near(r.treads[2].sirky.vystup, base.b + 15, 1e-6, 'úpravy: šírka stupňa 3');
+    near(r.treads[3].sirky.vystup, base.b - 15, 1e-6, 'úpravy: šírka stupňa 4');
+  }
+  const stale = C.compute({ N: N + 1, upravy: up });
+  ok(stale.upravy.pocet === 0 && stale.warnings.some(w => w.indexOf('Ručné úpravy') === 0), 'úpravy: iný N sa nepoužije');
+  ok(C.compute({ upravy: { N, typ: 'L', hrany: { 5: { ds: base.b + 10 } } } }).errors.length > 0, 'úpravy: prekríženie je chyba');
+  ok(!C.normalize({ upravy: { N, typ: 'L', hrany: { 2: { ds: 0, dt: 0 } } } }).upravy, 'úpravy: nulové sa zahodia');
 }
 
 console.log('\n' + passes + ' OK, ' + fails + ' chýb');

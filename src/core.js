@@ -362,7 +362,25 @@
     if (P.smer !== 'vpravo') P.smer = 'vlavo';
     P.N = Math.max(0, Math.round(P.N));
     P.nb = Math.max(0, Math.round(P.nb));
+    // ručné úpravy výstupných hrán: { N, typ, hrany: { index hrany: { ds, dt } } }
+    // ds = posun na výstupnej čiare, dt = dodatočný posun pri vnútornej hrane (mm)
+    const up = inp.upravy;
+    if (up && typeof up === 'object' && up.hrany && typeof up.hrany === 'object') {
+      const hrany = {};
+      for (const k of Object.keys(up.hrany)) {
+        const i = parseInt(k, 10), e = up.hrany[k] || {};
+        const ds = num(e.ds, 0), dt = num(e.dt, 0);
+        if (i >= 0 && (ds || dt)) hrany[i] = { ds, dt };
+      }
+      if (Object.keys(hrany).length) P.upravy = { N: Math.round(num(up.N, 0)), typ: String(up.typ || ''), hrany };
+    }
     return P;
+  }
+
+  // platné úpravy pre daný počet výšok a typ (inak null)
+  function activeEdits(P, N) {
+    const up = P.upravy;
+    return up && up.N === N && up.typ === P.typ ? up.hrany : null;
   }
 
   // ---------------------------------------------------------------- geometria typov
@@ -586,11 +604,36 @@
     res.sklon = Math.atan2(h, b) / DEG;
     res.eq = eq ? eq.regions.map(R => ({ od: R.a, po: R.e, n: R.n, K: R.K, stupne: R.cs.map(c => [c.a, c.e]) })) : [];
 
-    const advice = 'Zväčšite počet vyrovnaných stupňov, polomer vnútorného rohu alebo dĺžky ramien.';
+    // ---- ručné úpravy hrán: posun na výstupnej čiare (vnútorný bod sa posunie zodpovedajúco) + posun pri vnútornej hrane
+    const sBase = s.slice(), tBase = t.slice();
+    const ed = activeEdits(P, N);
+    res.upravy = { pocet: 0, ds: false };
+    if (P.upravy && !ed) res.warnings.push('Ručné úpravy stupňov sa nepoužili – zmenil sa počet výšok alebo typ schodov.');
+    if (ed) {
+      for (const k of Object.keys(ed)) {
+        const i = +k;
+        if (i >= N) continue;
+        const ds = i > 0 && i < N - 1 ? ed[k].ds : 0, dt = ed[k].dt;
+        if (!ds && !dt) continue;
+        const sn = s[i] + ds;
+        t[i] += mapOffset(walk, inner, sn) - mapOffset(walk, inner, s[i]) + dt;
+        s[i] = sn;
+        res.upravy.pocet++;
+        if (ds) res.upravy.ds = true;
+      }
+    }
+
+    const advice = res.upravy.pocet ? 'Zmenšite ručný posun hrán alebo úpravy zrušte.' : 'Zväčšite počet vyrovnaných stupňov, polomer vnútorného rohu alebo dĺžky ramien.';
     // ---- kontrola poradia na vnútornej hrane
     const winder = P.typ === 'L' || P.typ === 'U';
     const innerPoint = inner.len < 1e-6; // točité bez stĺpa: vnútorná hrana je bod
-    for (let i = 1; i < N && !innerPoint; i++) {
+    for (let i = 1; i < N; i++) {
+      if (!(s[i] - s[i - 1] > 1e-6)) {
+        res.errors.push('Výstupné hrany ' + i + ' a ' + (i + 1) + ' sa pretínajú na výstupnej čiare (ručná úprava). Zmenšite posun hrany.');
+        break;
+      }
+    }
+    for (let i = 1; i < N && !innerPoint && !res.errors.length; i++) {
       if (kinds[i] === 'podesta' ? t[i] - t[i - 1] < -1e-6 : !(t[i] - t[i - 1] > 1e-6)) {
         res.errors.push('Výstupné hrany ' + i + ' a ' + (i + 1) + ' sa pretínajú pri vnútornej hrane (stupeň ' + i + ' má nulovú alebo zápornú šírku). ' + advice);
         break;
@@ -611,7 +654,8 @@
       const cand = hits.filter(x => x.lam < minLam + 1e-6);
       cand.sort((a, b2) => Math.abs(a.s - expU) - Math.abs(b2.s - expU));
       const Q = cand[0];
-      edges.push({ i, s: s[i], t: t[i], u: Q.s, P: Pi, W: Wi, Q: Q.pt });
+      const up = ed && ed[i] && i < N ? ed[i] : null;
+      edges.push({ i, s: s[i], t: t[i], u: Q.s, P: Pi, W: Wi, Q: Q.pt, ds: up && i > 0 && i < N - 1 ? up.ds : 0, dt: up ? up.dt : 0 });
     }
 
     // hrana nesmie prejsť cez vnútornú hranu (otvor / zrkadlo)
@@ -732,7 +776,7 @@
       end: [inner.end, wall.end],
       walkStart: walk.start, walkEnd: walk.end, walkEndDir: walk.t1,
       column: P.typ === 'tocite' ? { c: v(0, 0), r: P.Rs } : null,
-      innerS: samplePathS(inner, 40), wallS: samplePathS(wall, 40),
+      innerS: samplePathS(inner, 40), wallS: samplePathS(wall, 40), walkS: samplePathS(walk, 40),
       hasWall: P.typ !== 'tocite'
     };
     res.geom.outline = joinPieces([
@@ -843,9 +887,18 @@
     const add = (id, nazov, ok, hodnota, limit, level) => C.push({ id, nazov, ok, hodnota, limit, level: ok ? 'ok' : (level || 'warn') });
     if (res.h == null) return;
     add('h', 'Výška stupňa h', res.h >= L.hMin - 1e-9 && res.h <= L.hMax + 1e-9, fmt(res.h, 1) + ' mm', L.hMin + '–' + L.hMax + ' mm');
-    add('b', 'Šírka stupňa b na výstupnej čiare', res.b >= L.bMin - 1e-9, fmt(res.b, 1) + ' mm', '≥ ' + L.bMin + ' mm');
-    add('k', 'Krokový modul 2h + b', res.krok >= L.kMin - 1e-9 && res.krok <= L.kMax + 1e-9, fmt(res.krok, 1) + ' mm', L.kMin + '–' + L.kMax + ' mm');
     const tr = res.treads || [];
+    // pri ručnom posune na výstupnej čiare sa šírky stupňov líšia: kontroluje sa najmenšia a najväčšia
+    const bs = res.upravy && res.upravy.ds ? tr.filter(x => x.kind === 'stupen').map(x => x.sirky.vystup) : [];
+    if (bs.length) {
+      const bMin = Math.min.apply(null, bs), bMax = Math.max.apply(null, bs);
+      add('b', 'Šírka stupňa b na výstupnej čiare (najmenšia)', bMin >= L.bMin - 1e-9, fmt(bMin, 1) + ' mm', '≥ ' + L.bMin + ' mm');
+      add('k', 'Krokový modul 2h + b', 2 * res.h + bMin >= L.kMin - 1e-9 && 2 * res.h + bMax <= L.kMax + 1e-9, fmt(2 * res.h + bMin, 1) + '–' + fmt(2 * res.h + bMax, 1) + ' mm', L.kMin + '–' + L.kMax + ' mm');
+      add('brov', 'Rovnaká šírka stupňov na výstupnej čiare', bMax - bMin <= 1 + 1e-9, 'rozdiel ' + fmt(bMax - bMin, 1) + ' mm', '≤ 1 mm');
+    } else {
+      add('b', 'Šírka stupňa b na výstupnej čiare', res.b >= L.bMin - 1e-9, fmt(res.b, 1) + ' mm', '≥ ' + L.bMin + ' mm');
+      add('k', 'Krokový modul 2h + b', res.krok >= L.kMin - 1e-9 && res.krok <= L.kMax + 1e-9, fmt(res.krok, 1) + ' mm', L.kMin + '–' + L.kMax + ' mm');
+    }
     const steps = tr.filter(x => x.kind === 'stupen');
     if (P.typ === 'L' || P.typ === 'U' || P.typ === 'tocite') {
       const ks = steps.map(x => x.sirky.kontrola).filter(x => x != null);
@@ -910,6 +963,7 @@
     G.outline = mc(G.outline);
     G.innerS = G.innerS.map(q => ({ x: q.x, y: -q.y, s: q.s }));
     G.wallS = G.wallS.map(q => ({ x: q.x, y: -q.y, s: q.s }));
+    G.walkS = G.walkS.map(q => ({ x: q.x, y: -q.y, s: q.s }));
     if (res.unfold) { /* rozvinutie nezávisí od smeru */ }
   }
 
