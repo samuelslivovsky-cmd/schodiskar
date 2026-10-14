@@ -1,0 +1,20 @@
+{
+  "name": "schodiskar",
+  "version": "1.0.0",
+  "description": "Schodiskár – návrh schodov s klinovými stupňami (offline, jeden index.html)",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "esbuild src/three-entry.js --bundle --minify --format=iife --legal-comments=none --outfile=vendor/three.min.js && node build.js",
+    "test": "node test/test-core.js && node test/fuzz-core.js",
+    "export-vzorky": "node test/gen-exports.js"
+  },
+  "devDependencies": {
+    "dejavu-fonts-ttf": "^2.37.3",
+    "esbuild": "^0.24.0",
+    "jspdf": "^2.5.2",
+    "three": "^0.169.0"
+  },
+  "private": true
+}

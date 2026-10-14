@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schodiskár – návrh schodov</title>
+<meta name="description" content="Návrh rovných, zalomených (L, U) a točitých schodov s vyrovnaním klinových stupňov. Výkresy, rozvinutie schodníc, dielce, PDF, DXF a CSV.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f2a37'/%3E%3Cpath d='M6 26h6v-5h5v-5h5v-5h5V6' fill='none' stroke='%23f59e0b' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+/*STYLE*/
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="currentColor"/><path d="M6 26h6v-5h5v-5h5v-5h5V6" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linejoin="round"/></svg>
+    <span>Schodiskár</span>
+  </div>
+  <div class="proj">
+    <input id="projekt" class="proj-name" data-key="projekt" aria-label="Názov projektu" placeholder="Názov projektu" spellcheck="false">
+  </div>
+  <nav class="actions">
+    <button id="btnNew" class="btn ghost" title="Nový projekt s predvolenými hodnotami">Nový</button>
+    <button id="btnOpen" class="btn ghost" title="Načítať projekt (JSON)">Otvoriť</button>
+    <button id="btnSave" class="btn ghost" title="Uložiť projekt (JSON)">Uložiť</button>
+    <span class="sep"></span>
+    <button id="btnPdf" class="btn primary" title="PDF A3 na šírku">PDF</button>
+    <button id="btnDxf" class="btn" title="DXF R12 v mm">DXF</button>
+    <button id="btnCsv" class="btn" title="Rozpis materiálu pre Excel">CSV</button>
+    <input id="fileOpen" type="file" accept=".json,application/json" hidden>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="side" id="side">
+    <section class="grp">
+      <h2>Typ schodov</h2>
+      <div class="types" id="types" role="radiogroup" aria-label="Typ schodov"></div>
+      <div class="dir" id="dirRow">
+        <span>Zákruta</span>
+        <div class="seg" role="radiogroup" aria-label="Smer zákruty">
+          <button data-smer="vlavo" role="radio">↰ vľavo</button>
+          <button data-smer="vpravo" role="radio">vpravo ↱</button>
+        </div>
+      </div>
+    </section>
+    <section class="grp" id="grpDims"><h2>Rozmery</h2><div class="fields" id="fDims"></div></section>
+    <section class="grp" id="grpWalk"><h2>Výstupná čiara a vyrovnanie</h2><div class="fields" id="fWalk"></div></section>
+    <section class="grp"><h2>Konštrukcia</h2><div class="fields" id="fCons"></div></section>
+    <details class="grp" id="grpLim">
+      <summary><h2>Limity</h2><span class="muted">upraviteľné</span></summary>
+      <div class="fields" id="fLim"></div>
+    </details>
+    <section class="grp"><h2>Projekt</h2><div class="fields" id="fProj"></div></section>
+    <p class="foot muted">Rozmery v mm. Zadanie sa ukladá v tomto prehliadači.</p>
+  </aside>
+
+  <main class="main">
+    <div class="summary" id="summary"></div>
+    <div class="msgs" id="msgs"></div>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="plan" class="on">Pôdorys</button>
+      <button role="tab" data-tab="3d">3D vizualizácia</button>
+      <button role="tab" data-tab="unfold">Rozvinutie</button>
+      <button role="tab" data-tab="parts">Dielce</button>
+      <button role="tab" data-tab="bom">Rozpis materiálu</button>
+      <button role="tab" data-tab="checks">Kontroly</button>
+    </div>
+    <div class="view" id="view"></div>
+  </main>
+</div>
+<div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<!--SCRIPTS-->
+</body>
+</html>
