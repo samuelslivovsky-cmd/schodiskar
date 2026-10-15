@@ -287,7 +287,7 @@
   const SCALES = [10, 20, 25, 50, 100, 200];
   const COLORS = {
     stena: [217, 221, 227], stupen: [244, 239, 230], podesta: [231, 239, 224], schodnica: [240, 228, 212],
-    STENA: [75, 85, 99], VYSTUPNA_CIARA: [194, 65, 12], KOTY: [47, 125, 79], PODSTUPNICE: [100, 116, 139], SCHODNICA: [138, 90, 43], STROP: [124, 58, 237], err: [220, 38, 38]
+    STENA: [75, 85, 99], VYSTUPNA_CIARA: [194, 65, 12], KOTY: [47, 125, 79], PODSTUPNICE: [100, 116, 139], SCHODNICA: [138, 90, 43], STROP: [124, 58, 237], RAMENA: [220, 38, 38], err: [220, 38, 38]
   };
   const LW = { tenka: 0.13, stredna: 0.3, hruba: 0.5 };
 
@@ -352,7 +352,7 @@
           doc.circle(c.x, c.y, it.r / scale, fill ? 'FD' : 'S');
         } else if (it.k === 'tx') {
           const c = T(it);
-          const col = it.L === 'KOTY' || it.L === 'STROP' ? COLORS[it.L] : [29, 39, 51];
+          const col = it.L === 'KOTY' || it.L === 'STROP' || it.L === 'RAMENA' ? COLORS[it.L] : [29, 39, 51];
           doc.setTextColor(col[0], col[1], col[2]);
           ptext(it.s, c.x, c.y, it.h / scale, { al: it.al, ang: it.ang, vmid: it.vmid, bold: it.bold });
           doc.setTextColor(0, 0, 0);
@@ -463,9 +463,10 @@
         y += 1;
       }
       // legenda
-      y = Math.max(y, PAGE.h - PAGE.m - 62);
+      y = Math.max(y, PAGE.h - PAGE.m - 66);
       ptext('Legenda', px, y, 2.4, { al: 'l', bold: true });
       const leg = [['VYSTUPNA_CIARA', '-.', 'výstupná čiara (• nástup, ▶ výstup)'], ['STUPNE', null, 'výstupná hrana (s presahom)'], ['PODSTUPNICE', '-', 'podstupnica'], ['KOTY', null, 'kóty pri stene, mm']];
+      if (res.geom && res.geom.ramena) leg.push(['RAMENA', '-', 'hranica ramena a zákruty']);
       if (res.strop) leg.push(['STROP', '-', inp.otvor > 0 ? 'hrana otvoru v strope' : 'najmenší potrebný otvor v strope']);
       leg.forEach((l, i) => {
         const yy = y + 4 + i * 4.2;

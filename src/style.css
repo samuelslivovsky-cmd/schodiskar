@@ -165,6 +165,8 @@ svg.vykres text { font-family: "DejaVu Sans", "Segoe UI", Arial, sans-serif; fil
 svg.vykres .T-KOTY { fill: #2f7d4f; }
 svg.vykres .L-STROP { stroke: #7c3aed; }
 svg.vykres .T-STROP { fill: #7c3aed; }
+svg.vykres .L-RAMENA { stroke: #dc2626; }
+svg.vykres .T-RAMENA { fill: #dc2626; }
 svg.vykres .b { font-weight: 700; }
 
 .tip { position: fixed; z-index: 20; background: var(--chrome); color: #f1f5f9; border-radius: 8px; padding: 10px 12px; font-size: 12.5px; pointer-events: none; box-shadow: 0 8px 24px #0004; min-width: 230px; }

@@ -809,6 +809,7 @@
       [bv(wall.end), bv(inner.end)],
       pathPiece(inner, inner.len, 0)
     ], true);
+    res.geom.ramena = arms(P, g, inner, walk, edges, N);
 
     // ---- rozvinutie schodníc
     if (!res.errors.length) res.unfold = unfold(P, res, inner, wall, edges, kinds, N, h, H);
@@ -903,6 +904,41 @@
       };
     };
     return { vnutorna: make(inner, 't'), vonkajsia: make(wall, 'u') };
+  }
+
+  // ramená: hranice zákrut (predĺženie vnútornej hrany ramena po stenu) a popisy s číslami stupňov
+  const ARM_NAMES = {
+    L: ['Rameno A', 'Rameno B'], Lp: ['Rameno A', 'Rameno B'],
+    U: ['Rameno 1', 'Medzirameno', 'Rameno 2'], Up: ['Rameno 1', 'Medzirameno', 'Rameno 2'],
+    U3: ['Rameno 1', 'Stredné rameno', 'Rameno 3']
+  };
+  function arms(P, g, inner, walk, edges, N) {
+    const names = ARM_NAMES[P.typ];
+    if (!names) return null;
+    const W = g.W, outer = g.offset(W);
+    const hranice = [], popisy = [];
+    const ip = inner.prims, op = outer.prims, wp = walk.prims;
+    for (let j = 1; j < ip.length - 1; j++) {
+      if (ip[j].t !== 'A') continue;
+      hranice.push([primPoint(ip[j], 0), primPoint(op[j], 0)]);
+      hranice.push([primPoint(ip[j], ip[j].len), primPoint(op[j], op[j].len)]);
+    }
+    let k = 0;
+    for (let j = 0; j < ip.length; j += 2, k++) {
+      const p = ip[j], w = wp[j];
+      if (p.t !== 'L' || p.len < 1) continue;
+      // stupne, ktorých stred na výstupnej čiare leží v ramene
+      const a = w.s0 - 1e-6, z = w.s0 + w.len + 1e-6, st = [];
+      for (let n = 1; n < N && edges[n]; n++) { const sm = (edges[n - 1].s + edges[n].s) / 2; if (sm >= a && sm <= z) st.push(n); }
+      if (k === 1 && names.length === 3 && p.len < 0.6 * W) continue; // úzke zrkadlo: popis by sa nezmestil
+      const mid = primPoint(p, p.len / 2), mo = primPoint(op[j], op[j].len / 2);
+      popisy.push({
+        p: add(mid, mul(sub(mo, mid), 0.82)), dir: p.u, nazov: names[k] || ('Rameno ' + (k + 1)),
+        stupne: st.length ? (st.length === 1 ? 'st. ' + st[0] : 'st. ' + st[0] + '–' + st[st.length - 1]) : 'bez stupňov',
+        dlzka: p.len
+      });
+    }
+    return { hranice, popisy };
   }
 
   // výška spojnice hrán stupňov (nad podestou jej povrch) v parametri s výstupnej čiary
@@ -1144,6 +1180,10 @@
     G.start = G.start.map(mp); G.end = G.end.map(mp);
     G.walkStart = mp(G.walkStart); G.walkEnd = mp(G.walkEnd); G.walkEndDir = mp(G.walkEndDir);
     G.outline = mc(G.outline);
+    if (G.ramena) {
+      G.ramena.hranice = G.ramena.hranice.map(h => h.map(mp));
+      for (const q of G.ramena.popisy) { q.p = mp(q.p); q.dir = mp(q.dir); }
+    }
     G.innerS = G.innerS.map(q => ({ x: q.x, y: -q.y, s: q.s }));
     G.wallS = G.wallS.map(q => ({ x: q.x, y: -q.y, s: q.s }));
     G.walkS = G.walkS.map(q => ({ x: q.x, y: -q.y, s: q.s }));

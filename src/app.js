@@ -264,6 +264,7 @@
     v.innerHTML = '<div class="canvas' + (edDrag ? ' edit' : '') + '" id="cv">' + svgStr + '</div>' +
       (legend ? '<div class="legend"><span><i style="border-color:#c2410c;border-top-style:dashed"></i>výstupná čiara</span><span><i style="border-color:#1d2733"></i>výstupná hrana (s presahom)</span><span><i style="border-color:#64748b;border-top-style:dashed"></i>podstupnica</span><span><i style="border-color:#2f7d4f"></i>kóty pri stene</span>' +
         (res.upravy && res.upravy.pocet ? '<span><i style="border-color:#2563eb"></i>upravená hrana</span>' : '') +
+        (res.geom && res.geom.ramena ? '<span><i style="border-color:#dc2626;border-top-style:dashed"></i>hranica ramena</span>' : '') +
         (res.strop ? '<span><i style="border-color:#7c3aed;border-top-style:dashed"></i>' + (input.otvor > 0 ? 'hrana stropu' : 'min. otvor v strope') + '</span>' : '') + '</div>' : '') +
       '<div class="zoomhint">' + (plan ? 'klik na stupeň = úprava · ' : '') + 'koliesko = zoom · ťahanie = posun · dvojklik = celé</div>' +
       (editing ? editPanel() : '');

@@ -293,6 +293,13 @@ console.log('— špecifické kontroly');
   ok(a.edges.every((e, i) => Math.abs(e.t - b.edges[i].t) < 1e-6 && Math.abs(e.u - b.edges[i].u) < 1e-6), 'U3: rovnaké hrany ako U');
   ok(a.checks.some(c => c.id === 'klin'), 'U3: kontrola klinu');
   ok(C.compute({ typ: 'U3', S: 1700, W: 900 }).errors.length > 0, 'U3: krátke stredné rameno je chyba');
+  // vyznačenie ramien: 2 hranice na zákrutu, popis každého ramena, stupne pokryté bez prekrytia
+  const R = a.geom.ramena;
+  ok(R.hranice.length === 4 && R.popisy.length === 3, 'U3: hranice a popisy ramien');
+  ok(R.popisy.map(q => q.nazov).join() === 'Rameno 1,Stredné rameno,Rameno 3', 'U3: názvy ramien');
+  const L = C.compute({ typ: 'L', smer: 'vpravo' }).geom.ramena;
+  ok(L.hranice.length === 2 && L.popisy.length === 2 && L.popisy.every(q => q.p.y <= 1e-6), 'L vpravo: ramená zrkadlené');
+  ok(!C.compute({ typ: 'rovne' }).geom.ramena && !C.compute({ typ: 'tocite' }).geom.ramena, 'rovné a točité bez ramien');
 }
 
 console.log('\n' + passes + ' OK, ' + fails + ' chýb');

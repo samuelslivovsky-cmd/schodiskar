@@ -25,7 +25,8 @@
     { name: 'ROZVINUTIE', color: 6, lt: 'CONTINUOUS' },
     { name: 'SCHODNICA', color: 30, lt: 'CONTINUOUS' },
     { name: 'DIELCE', color: 2, lt: 'CONTINUOUS' },
-    { name: 'STROP', color: 210, lt: 'DASHED' }
+    { name: 'STROP', color: 210, lt: 'DASHED' },
+    { name: 'RAMENA', color: 1, lt: 'DASHED' }
   ];
 
   const P = (x, y) => ({ x, y });
@@ -140,6 +141,16 @@
     if (opt.edits !== false) for (const e of res.edges || []) if (e.ds || e.dt) items.push(line(e.P, e.Q, { L: 'STUPNE', lw: 'hruba', upr: true, noExport: true }));
     if (res.errors && res.errors.length && res.edges) {
       for (const e of res.edges) items.push(line(e.P, e.Q, { L: 'STUPNE', err: true, lw: 'stredna' }));
+    }
+
+    // ramená: hranice zákrut a popisy
+    if (G.ramena && opt.ramena !== false) {
+      for (const hr of G.ramena.hranice) items.push(line(hr[0], hr[1], { L: 'RAMENA', dash: '-', lw: 'tenka' }));
+      for (const q of G.ramena.popisy) {
+        let ang = Math.atan2(q.dir.y, q.dir.x) / DEG;
+        if (ang > 90.01) ang -= 180; if (ang < -89.99) ang += 180;
+        items.push(tx(q.p.x, q.p.y, q.nazov + ' · ' + q.stupne, 2 * ts, { L: 'RAMENA', ang, vmid: true, bold: true }));
+      }
     }
 
     // hrana otvoru v strope (zadaná, inak najmenšia potrebná)
@@ -431,7 +442,7 @@
     '.L-STENA{stroke:#4b5563}.f-stena{fill:#d9dde3}',
     '.L-VYSTUPNA_CIARA{stroke:#c2410c}.L-VYSTUPNA_CIARA.f-cur,circle.L-VYSTUPNA_CIARA{fill:#c2410c}',
     '.L-KOTY{stroke:#2f7d4f}.L-PODSTUPNICE{stroke:#64748b}.L-SCHODNICA{stroke:#8a5a2b}.f-schodnica{fill:#e9d8c4;fill-opacity:.6}',
-    '.L-STROP{stroke:#7c3aed}.T-STROP{fill:#7c3aed}.f-stupen{fill:#f4efe6}.f-podesta{fill:#e7efe0}.L-DIELCE{stroke:#1d2733}.err{stroke:#dc2626}',
+    '.L-STROP{stroke:#7c3aed}.T-STROP{fill:#7c3aed}.L-RAMENA{stroke:#dc2626}.T-RAMENA{fill:#dc2626}.f-stupen{fill:#f4efe6}.f-podesta{fill:#e7efe0}.L-DIELCE{stroke:#1d2733}.err{stroke:#dc2626}',
     '.hov{stroke:none}',
     'text{font-family:"DejaVu Sans",Arial,sans-serif;fill:#1d2733}.T-KOTY{fill:#2f7d4f}.b{font-weight:700}'
   ].join('');

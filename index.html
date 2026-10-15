@@ -174,6 +174,8 @@ svg.vykres text { font-family: "DejaVu Sans", "Segoe UI", Arial, sans-serif; fil
 svg.vykres .T-KOTY { fill: #2f7d4f; }
 svg.vykres .L-STROP { stroke: #7c3aed; }
 svg.vykres .T-STROP { fill: #7c3aed; }
+svg.vykres .L-RAMENA { stroke: #dc2626; }
+svg.vykres .T-RAMENA { fill: #dc2626; }
 svg.vykres .b { font-weight: 700; }
 
 .tip { position: fixed; z-index: 20; background: var(--chrome); color: #f1f5f9; border-radius: 8px; padding: 10px 12px; font-size: 12.5px; pointer-events: none; box-shadow: 0 8px 24px #0004; min-width: 230px; }
@@ -5435,6 +5437,7 @@ void main() {
       [bv(wall.end), bv(inner.end)],
       pathPiece(inner, inner.len, 0)
     ], true);
+    res.geom.ramena = arms(P, g, inner, walk, edges, N);
 
     // ---- rozvinutie schodníc
     if (!res.errors.length) res.unfold = unfold(P, res, inner, wall, edges, kinds, N, h, H);
@@ -5529,6 +5532,41 @@ void main() {
       };
     };
     return { vnutorna: make(inner, 't'), vonkajsia: make(wall, 'u') };
+  }
+
+  // ramená: hranice zákrut (predĺženie vnútornej hrany ramena po stenu) a popisy s číslami stupňov
+  const ARM_NAMES = {
+    L: ['Rameno A', 'Rameno B'], Lp: ['Rameno A', 'Rameno B'],
+    U: ['Rameno 1', 'Medzirameno', 'Rameno 2'], Up: ['Rameno 1', 'Medzirameno', 'Rameno 2'],
+    U3: ['Rameno 1', 'Stredné rameno', 'Rameno 3']
+  };
+  function arms(P, g, inner, walk, edges, N) {
+    const names = ARM_NAMES[P.typ];
+    if (!names) return null;
+    const W = g.W, outer = g.offset(W);
+    const hranice = [], popisy = [];
+    const ip = inner.prims, op = outer.prims, wp = walk.prims;
+    for (let j = 1; j < ip.length - 1; j++) {
+      if (ip[j].t !== 'A') continue;
+      hranice.push([primPoint(ip[j], 0), primPoint(op[j], 0)]);
+      hranice.push([primPoint(ip[j], ip[j].len), primPoint(op[j], op[j].len)]);
+    }
+    let k = 0;
+    for (let j = 0; j < ip.length; j += 2, k++) {
+      const p = ip[j], w = wp[j];
+      if (p.t !== 'L' || p.len < 1) continue;
+      // stupne, ktorých stred na výstupnej čiare leží v ramene
+      const a = w.s0 - 1e-6, z = w.s0 + w.len + 1e-6, st = [];
+      for (let n = 1; n < N && edges[n]; n++) { const sm = (edges[n - 1].s + edges[n].s) / 2; if (sm >= a && sm <= z) st.push(n); }
+      if (k === 1 && names.length === 3 && p.len < 0.6 * W) continue; // úzke zrkadlo: popis by sa nezmestil
+      const mid = primPoint(p, p.len / 2), mo = primPoint(op[j], op[j].len / 2);
+      popisy.push({
+        p: add(mid, mul(sub(mo, mid), 0.82)), dir: p.u, nazov: names[k] || ('Rameno ' + (k + 1)),
+        stupne: st.length ? (st.length === 1 ? 'st. ' + st[0] : 'st. ' + st[0] + '–' + st[st.length - 1]) : 'bez stupňov',
+        dlzka: p.len
+      });
+    }
+    return { hranice, popisy };
   }
 
   // výška spojnice hrán stupňov (nad podestou jej povrch) v parametri s výstupnej čiary
@@ -5770,6 +5808,10 @@ void main() {
     G.start = G.start.map(mp); G.end = G.end.map(mp);
     G.walkStart = mp(G.walkStart); G.walkEnd = mp(G.walkEnd); G.walkEndDir = mp(G.walkEndDir);
     G.outline = mc(G.outline);
+    if (G.ramena) {
+      G.ramena.hranice = G.ramena.hranice.map(h => h.map(mp));
+      for (const q of G.ramena.popisy) { q.p = mp(q.p); q.dir = mp(q.dir); }
+    }
     G.innerS = G.innerS.map(q => ({ x: q.x, y: -q.y, s: q.s }));
     G.wallS = G.wallS.map(q => ({ x: q.x, y: -q.y, s: q.s }));
     G.walkS = G.walkS.map(q => ({ x: q.x, y: -q.y, s: q.s }));
@@ -5824,7 +5866,8 @@ void main() {
     { name: 'ROZVINUTIE', color: 6, lt: 'CONTINUOUS' },
     { name: 'SCHODNICA', color: 30, lt: 'CONTINUOUS' },
     { name: 'DIELCE', color: 2, lt: 'CONTINUOUS' },
-    { name: 'STROP', color: 210, lt: 'DASHED' }
+    { name: 'STROP', color: 210, lt: 'DASHED' },
+    { name: 'RAMENA', color: 1, lt: 'DASHED' }
   ];
 
   const P = (x, y) => ({ x, y });
@@ -5939,6 +5982,16 @@ void main() {
     if (opt.edits !== false) for (const e of res.edges || []) if (e.ds || e.dt) items.push(line(e.P, e.Q, { L: 'STUPNE', lw: 'hruba', upr: true, noExport: true }));
     if (res.errors && res.errors.length && res.edges) {
       for (const e of res.edges) items.push(line(e.P, e.Q, { L: 'STUPNE', err: true, lw: 'stredna' }));
+    }
+
+    // ramená: hranice zákrut a popisy
+    if (G.ramena && opt.ramena !== false) {
+      for (const hr of G.ramena.hranice) items.push(line(hr[0], hr[1], { L: 'RAMENA', dash: '-', lw: 'tenka' }));
+      for (const q of G.ramena.popisy) {
+        let ang = Math.atan2(q.dir.y, q.dir.x) / DEG;
+        if (ang > 90.01) ang -= 180; if (ang < -89.99) ang += 180;
+        items.push(tx(q.p.x, q.p.y, q.nazov + ' · ' + q.stupne, 2 * ts, { L: 'RAMENA', ang, vmid: true, bold: true }));
+      }
     }
 
     // hrana otvoru v strope (zadaná, inak najmenšia potrebná)
@@ -6230,7 +6283,7 @@ void main() {
     '.L-STENA{stroke:#4b5563}.f-stena{fill:#d9dde3}',
     '.L-VYSTUPNA_CIARA{stroke:#c2410c}.L-VYSTUPNA_CIARA.f-cur,circle.L-VYSTUPNA_CIARA{fill:#c2410c}',
     '.L-KOTY{stroke:#2f7d4f}.L-PODSTUPNICE{stroke:#64748b}.L-SCHODNICA{stroke:#8a5a2b}.f-schodnica{fill:#e9d8c4;fill-opacity:.6}',
-    '.L-STROP{stroke:#7c3aed}.T-STROP{fill:#7c3aed}.f-stupen{fill:#f4efe6}.f-podesta{fill:#e7efe0}.L-DIELCE{stroke:#1d2733}.err{stroke:#dc2626}',
+    '.L-STROP{stroke:#7c3aed}.T-STROP{fill:#7c3aed}.L-RAMENA{stroke:#dc2626}.T-RAMENA{fill:#dc2626}.f-stupen{fill:#f4efe6}.f-podesta{fill:#e7efe0}.L-DIELCE{stroke:#1d2733}.err{stroke:#dc2626}',
     '.hov{stroke:none}',
     'text{font-family:"DejaVu Sans",Arial,sans-serif;fill:#1d2733}.T-KOTY{fill:#2f7d4f}.b{font-weight:700}'
   ].join('');
@@ -6529,7 +6582,7 @@ void main() {
   const SCALES = [10, 20, 25, 50, 100, 200];
   const COLORS = {
     stena: [217, 221, 227], stupen: [244, 239, 230], podesta: [231, 239, 224], schodnica: [240, 228, 212],
-    STENA: [75, 85, 99], VYSTUPNA_CIARA: [194, 65, 12], KOTY: [47, 125, 79], PODSTUPNICE: [100, 116, 139], SCHODNICA: [138, 90, 43], STROP: [124, 58, 237], err: [220, 38, 38]
+    STENA: [75, 85, 99], VYSTUPNA_CIARA: [194, 65, 12], KOTY: [47, 125, 79], PODSTUPNICE: [100, 116, 139], SCHODNICA: [138, 90, 43], STROP: [124, 58, 237], RAMENA: [220, 38, 38], err: [220, 38, 38]
   };
   const LW = { tenka: 0.13, stredna: 0.3, hruba: 0.5 };
 
@@ -6594,7 +6647,7 @@ void main() {
           doc.circle(c.x, c.y, it.r / scale, fill ? 'FD' : 'S');
         } else if (it.k === 'tx') {
           const c = T(it);
-          const col = it.L === 'KOTY' || it.L === 'STROP' ? COLORS[it.L] : [29, 39, 51];
+          const col = it.L === 'KOTY' || it.L === 'STROP' || it.L === 'RAMENA' ? COLORS[it.L] : [29, 39, 51];
           doc.setTextColor(col[0], col[1], col[2]);
           ptext(it.s, c.x, c.y, it.h / scale, { al: it.al, ang: it.ang, vmid: it.vmid, bold: it.bold });
           doc.setTextColor(0, 0, 0);
@@ -6705,9 +6758,10 @@ void main() {
         y += 1;
       }
       // legenda
-      y = Math.max(y, PAGE.h - PAGE.m - 62);
+      y = Math.max(y, PAGE.h - PAGE.m - 66);
       ptext('Legenda', px, y, 2.4, { al: 'l', bold: true });
       const leg = [['VYSTUPNA_CIARA', '-.', 'výstupná čiara (• nástup, ▶ výstup)'], ['STUPNE', null, 'výstupná hrana (s presahom)'], ['PODSTUPNICE', '-', 'podstupnica'], ['KOTY', null, 'kóty pri stene, mm']];
+      if (res.geom && res.geom.ramena) leg.push(['RAMENA', '-', 'hranica ramena a zákruty']);
       if (res.strop) leg.push(['STROP', '-', inp.otvor > 0 ? 'hrana otvoru v strope' : 'najmenší potrebný otvor v strope']);
       leg.forEach((l, i) => {
         const yy = y + 4 + i * 4.2;
@@ -7996,6 +8050,7 @@ void main() {
     v.innerHTML = '<div class="canvas' + (edDrag ? ' edit' : '') + '" id="cv">' + svgStr + '</div>' +
       (legend ? '<div class="legend"><span><i style="border-color:#c2410c;border-top-style:dashed"></i>výstupná čiara</span><span><i style="border-color:#1d2733"></i>výstupná hrana (s presahom)</span><span><i style="border-color:#64748b;border-top-style:dashed"></i>podstupnica</span><span><i style="border-color:#2f7d4f"></i>kóty pri stene</span>' +
         (res.upravy && res.upravy.pocet ? '<span><i style="border-color:#2563eb"></i>upravená hrana</span>' : '') +
+        (res.geom && res.geom.ramena ? '<span><i style="border-color:#dc2626;border-top-style:dashed"></i>hranica ramena</span>' : '') +
         (res.strop ? '<span><i style="border-color:#7c3aed;border-top-style:dashed"></i>' + (input.otvor > 0 ? 'hrana stropu' : 'min. otvor v strope') + '</span>' : '') + '</div>' : '') +
       '<div class="zoomhint">' + (plan ? 'klik na stupeň = úprava · ' : '') + 'koliesko = zoom · ťahanie = posun · dvojklik = celé</div>' +
       (editing ? editPanel() : '');
