@@ -99,6 +99,8 @@ const cases = [
   ['U široké zrkadlo 1000', { typ: 'U', M: 1000, R1: 2600, R2: 2600, H: 3200 }],
   ['L podesta', { typ: 'Lp', A: 3200, B: 2600 }],
   ['U podesta', { typ: 'Up', R1: 2900, R2: 2900, M: 200 }],
+  ['U 3 ramená', { typ: 'U3', R1: 2170, S: 3370, R2: 1110 }],
+  ['U 3 ramená nb=2 r=150', { typ: 'U3', R1: 2600, S: 3600, R2: 2600, H: 3200, nb: 2, r: 150 }],
   ['točité 360°', { typ: 'tocite' }],
   ['točité 270° R=900', { typ: 'tocite', uhol: 270, Rv: 900, H: 2600 }],
   ['točité 450°', { typ: 'tocite', uhol: 450, H: 3200 }],
@@ -281,6 +283,16 @@ console.log('— špecifické kontroly');
       !(A.x + A.w + 4 <= B.x + 1e-6 || B.x + B.w + 4 <= A.x + 1e-6 || A.y + A.h + 4 <= B.y + 1e-6 || B.y + B.h + 4 <= A.y + 1e-6)) overlap = true;
   }
   ok(!overlap, 'dosky: dielce sa neprekrývajú (vrátane rezu)');
+}
+
+{
+  // U s 3 ramenami = U so zrkadlom M = S − 2W
+  const a = C.compute({ typ: 'U3', R1: 2170, S: 3370, R2: 1110, W: 900 });
+  const b = C.compute({ typ: 'U', R1: 2170, M: 1570, R2: 1110, W: 900 });
+  ok(a.errors.length === 0 && a.N === b.N, 'U3: rovnaký počet výšok ako U');
+  ok(a.edges.every((e, i) => Math.abs(e.t - b.edges[i].t) < 1e-6 && Math.abs(e.u - b.edges[i].u) < 1e-6), 'U3: rovnaké hrany ako U');
+  ok(a.checks.some(c => c.id === 'klin'), 'U3: kontrola klinu');
+  ok(C.compute({ typ: 'U3', S: 1700, W: 900 }).errors.length > 0, 'U3: krátke stredné rameno je chyba');
 }
 
 console.log('\n' + passes + ' OK, ' + fails + ' chýb');

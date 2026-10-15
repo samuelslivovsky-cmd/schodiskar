@@ -404,7 +404,7 @@
       lab('List', x + 150, r[1]); val(list + ' / ' + listov, x + 150, r[1], 3);
     }
     function fit(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
-    function shortType() { return { rovne: 'rovné', L: 'L, klinové stupne', U: 'U, klinové stupne', Lp: 'L s podestou', Up: 'U s podestou', tocite: 'točité vretenové' }[inp.typ] + (inp.typ !== 'rovne' ? ', ' + (inp.smer === 'vpravo' ? 'vpravo' : 'vľavo') : ''); }
+    function shortType() { return { rovne: 'rovné', L: 'L, klinové stupne', U: 'U, klinové stupne', U3: 'U s 3 ramenami, klinové', Lp: 'L s podestou', Up: 'U s podestou', tocite: 'točité vretenové' }[inp.typ] + (inp.typ !== 'rovne' ? ', ' + (inp.smer === 'vpravo' ? 'vpravo' : 'vľavo') : ''); }
 
     function table(x, y, colW, rows, o) {
       o = o || {};
@@ -642,9 +642,10 @@
     r.push(['Konštrukčná výška H', fmt(inp.H) + ' mm']);
     if (inp.typ === 'rovne') r.push(['Dĺžka L × šírka W', fmt(inp.L) + ' × ' + fmt(inp.W) + ' mm']);
     if (inp.typ === 'L' || inp.typ === 'Lp') r.push(['Ramená A / B, šírka W', fmt(inp.A) + ' / ' + fmt(inp.B) + ', ' + fmt(inp.W) + ' mm']);
+    if (inp.typ === 'U3') r.push(['Ramená 1 / stredné / 3, šírka W', fmt(inp.R1) + ' / ' + fmt(inp.S) + ' / ' + fmt(inp.R2) + ', ' + fmt(inp.W) + ' mm']);
     if (inp.typ === 'U' || inp.typ === 'Up') { r.push(['Ramená 1 / 2, šírka W', fmt(inp.R1) + ' / ' + fmt(inp.R2) + ', ' + fmt(inp.W) + ' mm']); r.push(['Zrkadlo', fmt(inp.M) + ' mm']); }
     if (inp.typ === 'tocite') { r.push(['Polomer vonk. / stĺpa', fmt(inp.Rv) + ' / ' + fmt(inp.Rs) + ' mm']); r.push(['Celkové otočenie', fmt(inp.uhol) + '°']); }
-    if (['L', 'U', 'Lp', 'Up'].includes(inp.typ)) r.push(['Polomer vnútorného rohu', fmt(inp.r) + ' mm']);
+    if (['L', 'U', 'U3', 'Lp', 'Up'].includes(inp.typ)) r.push(['Polomer vnútorného rohu', fmt(inp.r) + ' mm']);
     if (res.N) {
       r.push(['Počet výšok N × h', res.N + ' × ' + fmt(res.h, 1) + ' mm' + (res.autoN ? ' (auto)' : '')]);
       r.push(['Počet stupňov', String(res.N - 1) + (res.podesta ? ' (vrátane podesty)' : '')]);
@@ -653,7 +654,7 @@
       r.push(['Sklon', fmt(res.sklon, 1) + '°']);
       r.push(['Výstupná čiara od vnútra', fmt(res.w) + ' mm']);
       r.push(['Dĺžka výstupnej čiary', fmt(res.Lw) + ' mm']);
-      if (inp.typ === 'L' || inp.typ === 'U') r.push(['Vyrovnané stupne pred/za', String(inp.nb)]);
+      if (inp.typ === 'L' || inp.typ === 'U' || inp.typ === 'U3') r.push(['Vyrovnané stupne pred/za', String(inp.nb)]);
       if (res.najuzsiKlin) r.push(['Najužší klin (' + inp.lim.klinVzd + ' mm)', fmt(res.najuzsiKlin.hodnota, 1) + ' mm (st. ' + res.najuzsiKlin.stupen + ')']);
       if (res.podchod != null) r.push(['Podchodná výška', fmt(res.podchod) + ' mm']);
       r.push(['Presah / hrúbka stupňa', fmt(inp.presah) + ' / ' + fmt(inp.hrubka) + ' mm']);

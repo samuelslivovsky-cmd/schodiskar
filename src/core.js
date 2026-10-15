@@ -313,6 +313,7 @@
     rovne: 'Rovné',
     L: 'Zalomené do L (klinové stupne)',
     U: 'Zalomené do U (klinové stupne)',
+    U3: 'U s tromi ramenami (klinové stupne)',
     Lp: 'L s podestou',
     Up: 'U s podestou',
     tocite: 'Točité vretenové'
@@ -324,7 +325,7 @@
     H: 2800, N: 0, W: 900,
     L: 3800,
     A: 2600, B: 2600,
-    R1: 2200, R2: 2200, M: 150,
+    R1: 2200, R2: 2200, M: 150, S: 3400,
     r: 0,
     Rv: 1000, Rs: 100, uhol: 360,
     w: 0, nb: 3,
@@ -409,6 +410,15 @@
       if (P.A <= W) err('Rameno A musí byť dlhšie ako šírka ramena W.');
       if (P.B <= W) err('Rameno B musí byť dlhšie ako šírka ramena W.');
       if (r > lim && lim > 0) { res.warnings.push('Polomer vnútorného rohu bol zmenšený na ' + fmt(lim) + ' mm (krátke rameno).'); r = lim; }
+    } else if (T === 'U3') {
+      if (P.R1 <= W) err('Rameno 1 musí byť dlhšie ako šírka ramena W.');
+      if (P.R2 <= W) err('Rameno 3 musí byť dlhšie ako šírka ramena W.');
+      if (P.S <= 2 * W) err('Stredné rameno musí byť dlhšie ako dvojnásobok šírky ramena (2W).');
+      const lim = Math.min(Math.max(0, P.S - 2 * W) / 2, P.R1 - W, P.R2 - W);
+      if (r > lim + 1e-9) {
+        res.warnings.push('Polomer vnútorného rohu bol zmenšený na ' + fmt(Math.max(0, lim)) + ' mm.');
+        r = Math.max(0, lim);
+      }
     } else if (T === 'U' || T === 'Up') {
       if (P.M < 0) err('Zrkadlo nemôže byť záporné.');
       if (P.R1 <= W) err('Rameno 1 musí byť dlhšie ako šírka ramena W.');
@@ -422,7 +432,7 @@
     g.r = r;
     if (res.errors.length) return g;
 
-    const M = Math.max(0, P.M);
+    const M = T === 'U3' ? Math.max(0, P.S - 2 * W) : Math.max(0, P.M);
     if (T === 'rovne') {
       g.offset = d => makePath([Line(v(0, W - d), v(P.L, W - d))]);
       g.wall = makePath([Line(v(0, 0), v(P.L, 0))]);
@@ -436,7 +446,7 @@
       ]);
       g.wall = makePath([Line(v(0, 0), v(A, 0)), Line(v(A, 0), v(A, B))]);
       g.flightLen = [cx, B - W - r];
-    } else if (T === 'U' || T === 'Up') {
+    } else if (T === 'U' || T === 'Up' || T === 'U3') {
       const L1 = P.R1, L2 = P.R2, cx = L1 - W - r;
       const C1 = v(cx, W + r), C2 = v(cx, W + M - r);
       g.offset = d => makePath([
@@ -598,7 +608,7 @@
       for (let i = 0; i < N; i++) s.push(i * b);
       for (let j = 1; j < N; j++) kinds[j] = 'stupen';
       t = s.map(x => mapOffset(walk, inner, x));
-      if (P.typ === 'L' || P.typ === 'U') {
+      if (P.typ === 'L' || P.typ === 'U' || P.typ === 'U3') {
         eq = equalize(t, b, P.nb);
         t = eq.t;
       }
@@ -629,7 +639,7 @@
 
     const advice = res.upravy.pocet ? 'Zmenšite ručný posun hrán alebo úpravy zrušte.' : 'Zväčšite počet vyrovnaných stupňov, polomer vnútorného rohu alebo dĺžky ramien.';
     // ---- kontrola poradia na vnútornej hrane
-    const winder = P.typ === 'L' || P.typ === 'U';
+    const winder = P.typ === 'L' || P.typ === 'U' || P.typ === 'U3';
     const innerPoint = inner.len < 1e-6; // točité bez stĺpa: vnútorná hrana je bod
     for (let i = 1; i < N; i++) {
       if (!(s[i] - s[i - 1] > 1e-6)) {
@@ -1069,7 +1079,7 @@
       add('k', 'Krokový modul 2h + b', res.krok >= L.kMin - 1e-9 && res.krok <= L.kMax + 1e-9, fmt(res.krok, 1) + ' mm', L.kMin + '–' + L.kMax + ' mm');
     }
     const steps = tr.filter(x => x.kind === 'stupen');
-    if (P.typ === 'L' || P.typ === 'U' || P.typ === 'tocite') {
+    if (P.typ === 'L' || P.typ === 'U' || P.typ === 'U3' || P.typ === 'tocite') {
       const ks = steps.map(x => x.sirky.kontrola).filter(x => x != null);
       if (ks.length) {
         const mn = Math.min.apply(null, ks);
@@ -1082,7 +1092,7 @@
       const vn = steps.map(x => x.sirky.vnutri);
       if (vn.length) res.najuzsiVnutri = Math.min.apply(null, vn);
     }
-    if (P.typ === 'L' || P.typ === 'U') {
+    if (P.typ === 'L' || P.typ === 'U' || P.typ === 'U3') {
       const bad = res.errors.some(e => e.indexOf('pretínajú') >= 0 || e.indexOf('prechádza') >= 0);
       add('poradie', 'Výstupné hrany sa nepretínajú', !bad, bad ? 'pretínajú sa' : 'v poriadku', 'poradie rastie', 'err');
     }

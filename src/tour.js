@@ -9,7 +9,7 @@
   // krok: sel (selektor alebo zoznam – zjednotený obdĺžnik), title, text, before(), wait() = interaktívny krok
   const STEPS = [
     { title: 'Vitajte v Schodiskári', text: 'Krátka prehliadka vám za minútu ukáže, ako navrhnúť schody, upraviť jednotlivé stupne a vytlačiť výkresy. Kedykoľvek ju zavriete klávesom Esc.', next: 'Začať' },
-    { sel: '#types', title: 'Typ schodov', text: 'Vyberte tvar: rovné, zalomené do L alebo U s klinovými stupňami, s podestou alebo točité. Pri zalomených zvoľte aj smer zákruty.', place: 'right' },
+    { sel: '#types', title: 'Typ schodov', text: 'Vyberte tvar: rovné, zalomené do L alebo U s klinovými stupňami, U s tromi ramenami, s podestou alebo točité. Pri zalomených zvoľte aj smer zákruty.', place: 'right' },
     { sel: '#grpDims', title: 'Rozmery', text: 'Zadajte rozmery v mm. Hodnotu meníte aj šípkami ▲▼ pri poli alebo klávesmi ↑ ↓ (so Shiftom 10× viac). Výška H je od čistej po čistú podlahu.', place: 'right' },
     { sel: '#summary', title: 'Súhrn a stav', text: 'Tu vidíte výšku a šírku stupňa, krokový modul a stav návrhu: OK, POZOR (nesplnený limit) alebo CHYBA. Podrobnosti sú v záložke Kontroly.', place: 'bottom' },
     {

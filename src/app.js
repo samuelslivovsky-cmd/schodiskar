@@ -7,28 +7,29 @@
   const STORE = 'schodiskar.zadanie.v1';
 
   // ---------------------------------------------------------------- polia formulára
-  const ALL = 'rovne L U Lp Up tocite';
+  const ALL = 'rovne L U U3 Lp Up tocite';
   const FIELDS = {
     fDims: [
       ['H', 'Konštrukčná výška H', 'mm', ALL, 'čistá podlaha – čistá podlaha'],
       ['podlahaDole', 'Nášľapná vrstva dole', 'mm', ALL, 'podlaha pri nástupe'],
       ['podlahaHore', 'Nášľapná vrstva hore', 'mm', ALL, 'podlaha pri výstupe'],
       ['N', 'Počet výšok N', 'ks', ALL, '0 = automaticky'],
-      ['W', 'Šírka ramena W', 'mm', 'rovne L U Lp Up'],
+      ['W', 'Šírka ramena W', 'mm', 'rovne L U U3 Lp Up'],
       ['L', 'Dĺžka L', 'mm', 'rovne'],
       ['A', 'Rameno A', 'mm', 'L Lp', 'vonkajší rozmer'],
       ['B', 'Rameno B', 'mm', 'L Lp', 'vonkajší rozmer'],
-      ['R1', 'Rameno 1', 'mm', 'U Up', 'vonkajší rozmer'],
-      ['R2', 'Rameno 2', 'mm', 'U Up', 'vonkajší rozmer'],
+      ['R1', 'Rameno 1', 'mm', 'U U3 Up', 'vonkajší rozmer', false, { U3: ['Rameno 1 – nástupné', 'vonkajší rozmer'] }],
+      ['S', 'Stredné rameno', 'mm', 'U3', 'vonkajší rozmer'],
+      ['R2', 'Rameno 2', 'mm', 'U U3 Up', 'vonkajší rozmer', false, { U3: ['Rameno 3 – výstupné', 'vonkajší rozmer'] }],
       ['M', 'Zrkadlo', 'mm', 'U Up', 'medzera medzi ramenami'],
-      ['r', 'Polomer vnútorného rohu', 'mm', 'L U Lp Up', '0 = ostrý roh'],
+      ['r', 'Polomer vnútorného rohu', 'mm', 'L U U3 Lp Up', '0 = ostrý roh'],
       ['Rv', 'Vonkajší polomer R', 'mm', 'tocite'],
       ['Rs', 'Polomer stĺpa', 'mm', 'tocite'],
       ['uhol', 'Celkové otočenie', '°', 'tocite']
     ],
     fWalk: [
       ['w', 'Výstupná čiara od vnútornej hrany', 'mm', ALL, '0 = stred ramena'],
-      ['nb', 'Vyrovnané stupne pred a za zákrutou', 'ks', 'L U']
+      ['nb', 'Vyrovnané stupne pred a za zákrutou', 'ks', 'L U U3']
     ],
     fCons: [
       ['presah', 'Presah stupňa', 'mm'],
@@ -38,8 +39,8 @@
       ['hrubkaSchodnice', 'Hrúbka schodnice', 'mm']
     ],
     fStrop: [
-      ['strop', 'Hrúbka stropu', 'mm', 'rovne L U Lp Up', 'vrátane podlahy hore'],
-      ['otvor', 'Dĺžka otvoru v strope', 'mm', 'rovne L U Lp Up', 'po výstupnej čiare od výstupu; 0 = len vypočítať']
+      ['strop', 'Hrúbka stropu', 'mm', 'rovne L U U3 Lp Up', 'vrátane podlahy hore'],
+      ['otvor', 'Dĺžka otvoru v strope', 'mm', 'rovne L U U3 Lp Up', 'po výstupnej čiare od výstupu; 0 = len vypočítať']
     ],
     fMat: [
       ['vyskaZabradlia', 'Výška zábradlia', 'mm', ALL, 'madlo nad hranou stupňa'],
@@ -66,12 +67,13 @@
   const TYPE_ICONS = {
     rovne: '<path d="M6 8h28v24H6z"/><path d="M11 8v24M16 8v24M21 8v24M26 8v24M31 8v24" class="t"/>',
     L: '<path d="M4 34V22h18V4h14v30z"/><path d="M8 22v12M12 22v12M17 22l-2 12M22 22l14-4M22 22l14 4M22 22l6 12M22 22l10 10M22 18h14M22 13h14M22 8h14" class="t"/>',
+    U3: '<path d="M4 34V6h32v20h-9V15H13v19z"/><path d="M4 30h9M4 26h9M4 22h9M13 15L4 11M13 15l-5-9M13 15l3-9M18 6v9M23 6v9M27 15l-3-9M27 15l5-9M27 15l9-4M27 19h9M27 23h9" class="t"/>',
     U: '<path d="M4 4h32v32H4V24h18v-8H4z"/><path d="M9 4v12M14 4v12M19 4l2 12M22 16l14-10M22 20h14M22 24l14 10M19 36l2-12M14 36V24M9 36V24" class="t"/>',
     Lp: '<path d="M4 34V22h18V4h14v30z"/><path d="M22 20h14v14H22z" class="f"/><path d="M8 22v12M12 22v12M16 22v12M22 15h14M22 10h14" class="t"/>',
     Up: '<path d="M4 4h32v32H4V24h18v-8H4z"/><path d="M22 4h14v32H22z" class="f"/><path d="M8 4v12M12 4v12M16 4v12M8 24v12M12 24v12M16 24v12" class="t"/>',
     tocite: '<circle cx="20" cy="20" r="16"/><circle cx="20" cy="20" r="3" class="f"/><path d="M20 4v13M31.3 8.7l-9.2 9.2M36 20H23M31.3 31.3l-9.2-9.2M20 36V23M8.7 31.3l9.2-9.2M4 20h13" class="t"/>'
   };
-  const TYPE_SHORT = { rovne: 'Rovné', L: 'L klinové', U: 'U klinové', Lp: 'L podesta', Up: 'U podesta', tocite: 'Točité' };
+  const TYPE_SHORT = { rovne: 'Rovné', L: 'L klinové', U: 'U klinové', U3: 'U 3 ramená', Lp: 'L podesta', Up: 'U podesta', tocite: 'Točité' };
 
   // ---------------------------------------------------------------- stav
   let input = loadStored() || C.normalize({});
@@ -129,8 +131,8 @@
     });
     for (const [box, list] of Object.entries(FIELDS)) {
       const el = document.getElementById(box);
-      el.innerHTML = list.map(([k, label, unit, types, hint, wide]) =>
-        '<div class="fld' + (wide ? ' wide' : '') + '" data-types="' + (types || ALL) + '">' +
+      el.innerHTML = list.map(([k, label, unit, types, hint, wide, alt]) =>
+        '<div class="fld' + (wide ? ' wide' : '') + '" data-types="' + (types || ALL) + '"' + (alt ? ' data-alt="' + JSON.stringify(Object.assign({ '*': [label, hint] }, alt)).replace(/"/g, '&quot;') + '"' : '') + '>' +
         '<label for="in-' + k + '">' + label + (hint ? '<small>' + hint + '</small>' : '') + '</label>' +
         '<div class="inp' + (wide ? '' : ' sp') + '"><input id="in-' + k + '" data-key="' + k + '" ' + (wide ? '' : 'inputmode="decimal" data-min="0" data-step="' + (['N', 'nb'].includes(k) ? 1 : 10) + '" ') + 'autocomplete="off" spellcheck="false">' +
         (unit ? '<span class="u">' + unit + '</span>' : '') + (wide ? '' : SPIN) + '</div></div>').join('');
@@ -180,6 +182,10 @@
     $('#dirRow').hidden = input.typ === 'rovne';
     $('#dirRow').querySelector('span').textContent = input.typ === 'tocite' ? 'Smer otáčania' : 'Zákruta';
     document.querySelectorAll('.fld').forEach(f => { f.hidden = f.dataset.types.split(' ').indexOf(input.typ) < 0; });
+    document.querySelectorAll('.fld[data-alt]').forEach(f => {
+      const alt = JSON.parse(f.dataset.alt), l = alt[input.typ] || alt['*'];
+      f.querySelector('label').innerHTML = l[0] + (l[1] ? '<small>' + l[1] + '</small>' : '');
+    });
     document.querySelectorAll('.grp[data-auto]').forEach(g => { g.hidden = !g.querySelector('.fld:not([hidden])'); });
   }
 
