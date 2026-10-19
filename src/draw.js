@@ -137,10 +137,10 @@
     // bočnice v pôdoryse: pri stene medzi lícom bočnice a stenou, vnútorná von od vnútornej hrany
     if (tb > 0) {
       const sw = C.sampleVerts(G.wall, false, 4 * DEG);
-      items.push(pl(vv(sw.concat(outward(sw, tb).reverse())), { c: true, L: 'SCHODNICA', fill: 'schodnica', lw: 'tenka' }));
+      items.push(pl(vv(sw.concat(outward(sw, tb).reverse())), { c: true, L: 'SCHODNICA', fill: 'bocPlan', lw: 'stredna' }));
       if (inp.typ !== 'tocite') {
         const si = C.sampleVerts(G.inner, false, 4 * DEG);
-        items.push(pl(vv(si.concat(outward(si, tb).reverse())), { c: true, L: 'SCHODNICA', fill: 'schodnica', lw: 'tenka' }));
+        items.push(pl(vv(si.concat(outward(si, tb).reverse())), { c: true, L: 'SCHODNICA', fill: 'bocPlan', lw: 'stredna' }));
       }
     }
     if (G.column) items.push({ k: 'ci', x: G.column.c.x, y: G.column.c.y, r: G.column.r, L: 'OBRYS', fill: 'stena' });
@@ -472,12 +472,40 @@
       items.push(pl(g.verts, { c: true, L: dL, lw: 'stredna', fill: o.fill ? (g.typ === 'stupen' ? 'drazka' : 'drazkaP') : null }));
       if (o.labels !== false) items.push(tx(g.lab.x, g.lab.y, (g.typ === 'stupen' ? 'S' : 'P') + g.n, 1.6 * ts, { L: 'POPIS', vmid: true }));
     }
+    let topH = 3 * ts;
     if (o.dims !== false) {
       items.push(...dim(P(0, 0), P(W, 0), P(0, -1), 5 * ts, fmt(W), ts));
       items.push(...dim(P(W, 0), P(W, H), P(1, 0), 5 * ts, fmt(H), ts));
-      if (o.title !== false) items.push(tx(0, H + 3 * ts, b.id + ' · ' + b.nazov + ' · st. ' + b.stupne + ' · hrúbka ' + fmt(b.hrubka) + (b.oblukova ? ' · OBLÚKOVÁ (rozvinutá)' : ''), 2.4 * ts, { L: 'POPIS', al: 'l', bold: true }));
+      // dĺžka tvaru (bez prídavku) a začiatok tvaru od okraja prírezu
+      const ob = C.bbox(b.obrys);
+      items.push(...dim(P(ob.minX, 0), P(ob.maxX, 0), P(0, -1), 10 * ts, 'tvar ' + fmt(ob.maxX - ob.minX), ts));
+      // poradnicové kóty drážok: x horného rohu drážky na nástupnej strane, merané od ľavého okraja prírezu
+      const gs = b.drazky.filter(g => g.typ === 'stupen').sort((p, q) => p.ref.x - q.ref.x); // podstupnice sú hneď vedľa – len v tabuľke
+      const yb = H + 2 * ts, th = 1.9 * ts, step = th * 1.3;
+      let lastX = -1e9, maxLen = 0;
+      for (const g of gs) {
+        const txX = Math.max(g.ref.x, lastX + step);
+        lastX = txX;
+        items.push(line(P(g.ref.x, g.ref.y), P(g.ref.x, yb), { L: 'KOTY', lw: 'tenka', dash: '-' }));
+        items.push(line(P(g.ref.x, yb), P(txX, yb + 1.2 * ts), { L: 'KOTY', lw: 'tenka' }));
+        items.push({ k: 'ci', x: g.ref.x, y: g.ref.y, r: 0.45 * ts, L: 'KOTY', fill: 'cur' });
+        const t = fmt(g.ref.x);
+        maxLen = Math.max(maxLen, t.length);
+        items.push(tx(txX, yb + 1.6 * ts, t, th, { L: 'KOTY', al: 'l', ang: 90, vmid: true }));
+      }
+      if (gs.length) {
+        items.push(tx(0, -18 * ts, 'Body = horný roh drážky stupňa na nástupnej strane; kóty x hore od ľavého okraja prírezu, x / y a rozmery všetkých drážok v tabuľke. Drážky sklon ' + fmt(b.uholDrazok, 1) + '° k prírezu, hĺbka ' + fmt(gs[0].hlbka) + ' mm.', 1.6 * ts, { L: 'POPIS', al: 'l' }));
+        topH = 2 * ts + 1.6 * ts + maxLen * 0.62 * th + 2 * ts;
+      }
+      if (o.title !== false) items.push(tx(0, H + topH, b.id + ' · ' + b.nazov + ' · st. ' + b.stupne + ' · hrúbka ' + fmt(b.hrubka) + (b.oblukova ? ' · OBLÚKOVÁ (rozvinutá)' : ''), 2.4 * ts, { L: 'POPIS', al: 'l', bold: true }));
     }
     return { items, w: W, h: H };
+  }
+
+  // tabuľka drážok bočnice: označenie, x, y (od ľavého dolného rohu prírezu), dĺžka × šírka × hĺbka
+  function bocnicaTab(b) {
+    return b.drazky.slice().sort((p, q) => p.ref.x - q.ref.x)
+      .map(g => ({ oz: (g.typ === 'stupen' ? 'S' : 'P') + g.n, x: g.ref.x, y: g.ref.y, dlzka: g.dlzka, sirka: g.sirka, hlbka: g.hlbka }));
   }
 
   // rozloženie dielcov do riadkov (šírka v mm modelu); vracia zoznam {items posunutých, page?}
@@ -578,12 +606,12 @@
     '.d1{stroke-dasharray:6 4}.d2{stroke-dasharray:14 4 2 4}',
     '.L-STENA{stroke:#4b5563}.f-stena{fill:#d9dde3}',
     '.L-VYSTUPNA_CIARA{stroke:#c2410c}.L-VYSTUPNA_CIARA.f-cur,circle.L-VYSTUPNA_CIARA{fill:#c2410c}',
-    '.L-KOTY{stroke:#2f7d4f}.L-PODSTUPNICE{stroke:#64748b}.L-SCHODNICA{stroke:#8a5a2b}.f-schodnica{fill:#e9d8c4;fill-opacity:.6}',
+    '.L-KOTY{stroke:#2f7d4f}.L-PODSTUPNICE{stroke:#64748b}.L-SCHODNICA{stroke:#8a5a2b}.f-schodnica{fill:#e9d8c4;fill-opacity:.6}.f-bocPlan{fill:#b07a45}',
     '.L-PRIREZ{stroke:#94a3b8}.f-priRez{fill:#f8fafc}.L-REZ_OBRYS{stroke:#1d2733}.f-bocnica{fill:#efe2cf}[class*=L-DRAZKA]{stroke:#0e7490}.f-drazka{fill:#a5d8e6}.f-drazkaP{fill:#cbe9f0}.T-POPIS{fill:#155e75}' +
     '.L-STROP{stroke:#7c3aed}.T-STROP{fill:#7c3aed}.L-RAMENA{stroke:#dc2626}.T-RAMENA{fill:#dc2626}.f-stupen{fill:#f4efe6}.f-podesta{fill:#e7efe0}.L-DIELCE{stroke:#1d2733}.L-CAPY{stroke:#0e7490}.f-cap{fill:#7dc4d8}.err{stroke:#dc2626}',
     '.hov{stroke:none}.f-bocSel{fill:#bcd3f5}.f-bocUpr{fill:#f3d9b8}.L-DRAZKA{stroke:#0e7490}',
     'text{font-family:"DejaVu Sans",Arial,sans-serif;fill:#1d2733}.T-KOTY{fill:#2f7d4f}.T-CAPY{fill:#0e7490}.b{font-weight:700}'
   ].join('');
 
-  return { LAYERS, CNC_LAYERS, bocnica, bocStrana, polyYRange, plan, unfold, part, partsLayout, moveItems, itemsBBox, toSVG, svgPath, SVG_STYLE, dim };
+  return { LAYERS, CNC_LAYERS, bocnica, bocnicaTab, bocStrana, polyYRange, plan, unfold, part, partsLayout, moveItems, itemsBBox, toSVG, svgPath, SVG_STYLE, dim };
 });

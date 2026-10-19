@@ -139,6 +139,8 @@ svg.vykres .L-KOTY { stroke: #2f7d4f; }
 svg.vykres .L-PODSTUPNICE { stroke: #64748b; }
 svg.vykres .L-SCHODNICA { stroke: #8a5a2b; }
 svg.vykres .f-schodnica { fill: #e9d8c4; fill-opacity: .6; }
+svg.vykres .f-bocPlan { fill: #b07a45; }
+.side .fld select { width: 100%; font: 500 13.5px var(--sans); padding: 5px 8px; border: 1px solid var(--line-2); border-radius: 6px; background: #fff; }
 svg.vykres .f-stupen { fill: #f4efe6; }
 svg.vykres .f-podesta { fill: #e7efe0; }
 svg.vykres .err { stroke: #dc2626; }
@@ -302,6 +304,9 @@ svg.board text { fill: #3b2a18; font-family: var(--sans); font-weight: 600; poin
 .bocForm select { width: 100%; font: 500 13.5px var(--sans); padding: 5px 8px; border: 1px solid var(--line-2); border-radius: 6px; background: #fff; }
 .bocList { padding: 14px 16px; display: grid; gap: 14px; align-content: start; }
 .bocList .parts { padding: 0; }
+.drTab { padding: 4px 12px 10px; font-size: 12.5px; }
+.drTab summary { cursor: pointer; color: var(--ink-2); font-weight: 600; padding: 4px 0; }
+.drTab .tb { margin-top: 6px; }
 .bocHead { display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: 13px; }
 .bocCard { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fff; }
 .bocCard header { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; font-size: 13px; margin-bottom: 6px; }

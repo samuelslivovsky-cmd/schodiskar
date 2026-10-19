@@ -34,6 +34,7 @@
     fCons: [
       ['presah', 'Presah stupňa', 'mm'],
       ['hrubka', 'Hrúbka stupňa', 'mm'],
+      ['podst', 'Podstupnice', [['ano', 'áno'], ['nie', 'nie']], ALL, 'nie = otvorené schody'],
       ['hrubkaPodst', 'Hrúbka podstupnice', 'mm'],
       ['sirkaSchodnice', 'Šírka schodnice', 'mm'],
       ['hrubkaSchodnice', 'Hrúbka schodnice', 'mm']
@@ -43,6 +44,7 @@
       ['otvor', 'Dĺžka otvoru v strope', 'mm', 'rovne L U U3 Lp Up', 'po výstupnej čiare od výstupu; 0 = len vypočítať']
     ],
     fMat: [
+      ['viz.zabradlie', 'Zábradlie', Object.keys(C.ZABRADLIE).map(k => [k, C.ZABRADLIE[k]])],
       ['vyskaZabradlia', 'Výška zábradlia', 'mm', ALL, 'madlo nad hranou stupňa'],
       ['doskaDlzka', 'Doska – dĺžka', 'mm', ALL, 'v smere vlákien'],
       ['doskaSirka', 'Doska – šírka', 'mm'],
@@ -109,8 +111,22 @@
   }
 
   const SPIN = '<span class="spin" aria-hidden="true"><button type="button" tabindex="-1" data-d="1">▲</button><button type="button" tabindex="-1" data-d="-1">▼</button></span>';
-  const getK = k => k.indexOf('lim.') === 0 ? input.lim[k.slice(4)] : input[k];
-  const setK = (k, v) => { if (k.indexOf('lim.') === 0) input.lim[k.slice(4)] = v; else input[k] = v; };
+  // 'lim.x' = limity, 'viz.x' = nastavenie vizualizácie, 'podst' = podstupnice áno/nie (viz.podstupnice 'ziadne' = bez)
+  const VIZ_DEF = { zabradlie: 'ocel', podstupnice: 'biela' };
+  const getK = k => {
+    if (k.indexOf('lim.') === 0) return input.lim[k.slice(4)];
+    if (k.indexOf('viz.') === 0) return (input.viz && input.viz[k.slice(4)]) || VIZ_DEF[k.slice(4)];
+    if (k === 'podst') return input.viz && input.viz.podstupnice === 'ziadne' ? 'nie' : 'ano';
+    return input[k];
+  };
+  const setK = (k, v) => {
+    if (k.indexOf('lim.') === 0) input.lim[k.slice(4)] = v;
+    else if (k.indexOf('viz.') === 0) input.viz = Object.assign({}, input.viz || {}, { [k.slice(4)]: v });
+    else if (k === 'podst') {
+      const cur = input.viz && input.viz.podstupnice;
+      input.viz = Object.assign({}, input.viz || {}, { podstupnice: v === 'nie' ? 'ziadne' : (cur && cur !== 'ziadne' ? cur : VIZ_DEF.podstupnice) });
+    } else input[k] = v;
+  };
 
   // ---------------------------------------------------------------- formulár
   function buildForm() {
@@ -131,13 +147,15 @@
     });
     for (const [box, list] of Object.entries(FIELDS)) {
       const el = document.getElementById(box);
-      el.innerHTML = list.map(([k, label, unit, types, hint, wide, alt]) =>
-        '<div class="fld' + (wide ? ' wide' : '') + '" data-types="' + (types || ALL) + '"' + (alt ? ' data-alt="' + JSON.stringify(Object.assign({ '*': [label, hint] }, alt)).replace(/"/g, '&quot;') + '"' : '') + '>' +
+      el.innerHTML = list.map(([k, label, unit, types, hint, wide, alt]) => Array.isArray(unit)
+        ? '<div class="fld" data-types="' + (types || ALL) + '"><label for="in-' + k + '">' + label + (hint ? '<small>' + hint + '</small>' : '') + '</label><select id="in-' + k + '" data-key="' + k + '">' + unit.map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('') + '</select></div>'
+        : '<div class="fld' + (wide ? ' wide' : '') + '" data-types="' + (types || ALL) + '"' + (alt ? ' data-alt="' + JSON.stringify(Object.assign({ '*': [label, hint] }, alt)).replace(/"/g, '&quot;') + '"' : '') + '>' +
         '<label for="in-' + k + '">' + label + (hint ? '<small>' + hint + '</small>' : '') + '</label>' +
         '<div class="inp' + (wide ? '' : ' sp') + '"><input id="in-' + k + '" data-key="' + k + '" ' + (wide ? '' : 'inputmode="decimal" data-min="0" data-step="' + (['N', 'nb'].includes(k) ? 1 : 10) + '" ') + 'autocomplete="off" spellcheck="false">' +
         (unit ? '<span class="u">' + unit + '</span>' : '') + (wide ? '' : SPIN) + '</div></div>').join('');
     }
     document.querySelectorAll('input[data-key]').forEach(bindInput);
+    document.querySelectorAll('.side select[data-key]').forEach(sl => sl.addEventListener('change', () => { setK(sl.dataset.key, sl.value); changed(true); }));
   }
 
   function bindInput(inp) {
@@ -293,7 +311,7 @@
     let svgStr = D.toSVG(dr.items, dr.bbox);
     if (editing) svgStr = svgStr.replace('</svg>', handlesSVG(dr.ts) + '</svg>');
     v.innerHTML = '<div class="canvas' + (edDrag ? ' edit' : '') + '" id="cv">' + svgStr + '</div>' +
-      (legend ? '<div class="legend"><span><i style="border-color:#c2410c;border-top-style:dashed"></i>výstupná čiara</span><span><i style="border-color:#1d2733"></i>výstupná hrana (s presahom)</span><span><i style="border-color:#64748b;border-top-style:dashed"></i>podstupnica</span><span><i style="border-color:#2f7d4f"></i>kóty pri stene</span>' +
+      (legend ? '<div class="legend"><span><i style="border-color:#c2410c;border-top-style:dashed"></i>výstupná čiara</span><span><i style="border-color:#1d2733"></i>výstupná hrana (s presahom)</span>' + (res.bezPodstupnic ? '' : '<span><i style="border-color:#64748b;border-top-style:dashed"></i>podstupnica</span>') + (res.geom && res.geom.bocHrubka > 0 ? '<span><i style="border-color:#b07a45;border-top-width:5px"></i>bočnica</span>' : '') + '<span><i style="border-color:#2f7d4f"></i>kóty pri stene</span>' +
         (res.upravy && res.upravy.pocet ? '<span><i style="border-color:#2563eb"></i>upravená hrana</span>' : '') +
         (res.geom && res.geom.ramena ? '<span><i style="border-color:#dc2626;border-top-style:dashed"></i>hranica ramena</span>' : '') +
         (res.strop ? '<span><i style="border-color:#7c3aed;border-top-style:dashed"></i>' + (input.otvor > 0 ? 'hrana stropu' : 'min. otvor v strope') + '</span>' : '') + '</div>' : '') +
@@ -664,9 +682,12 @@
     let h = '<div class="pane"><h3>Stupne</h3><table class="tb"><thead><tr><th class="n">Č.</th><th>Druh</th><th class="n">Prírez d × š × t</th><th class="n">Plocha tvaru</th><th class="n">Objem prírezu</th><th class="n">Šírka vnútri</th><th class="n">Na výst. čiare</th><th class="n">Vonku</th><th class="n">' + input.lim.klinVzd + ' mm od vnútra</th></tr></thead><tbody>';
     for (const s of b.stupne) h += '<tr' + (s.n === minK ? ' class="min" title="najužší klin"' : '') + '><td class="n">' + s.n + '</td><td>' + s.druh + '</td><td class="n">' + fmt(s.dlzka) + ' × ' + fmt(s.sirka) + ' × ' + fmt(s.hrubka) + '</td><td class="n">' + fmt(s.plocha, 3) + ' m²</td><td class="n">' + fmt(s.objem, 4) + ' m³</td><td class="n">' + fmt(s.vnutri, 1) + '</td><td class="n">' + fmt(s.vystup, 1) + '</td><td class="n">' + fmt(s.vonku, 1) + '</td><td class="n">' + (s.kontrola == null ? '' : fmt(s.kontrola, 1)) + '</td></tr>';
     h += '<tr class="sum"><td></td><td>' + b.sucty.stupneKs + ' ks</td><td></td><td class="n">' + fmt(b.sucty.stupnePlocha, 3) + ' m² prírezov</td><td class="n">' + fmt(b.sucty.stupneObjem, 3) + ' m³</td><td colspan="4"></td></tr></tbody></table>';
-    h += '<h3>Podstupnice</h3><table class="tb"><thead><tr><th class="n">Č.</th><th class="n">Dĺžka</th><th class="n">Výška</th><th class="n">Hrúbka</th><th class="n">Objem</th></tr></thead><tbody>';
-    for (const s of b.podst) h += '<tr><td class="n">' + s.n + '</td><td class="n">' + fmt(s.dlzka) + '</td><td class="n">' + fmt(s.vyska) + '</td><td class="n">' + fmt(s.hrubka) + '</td><td class="n">' + fmt(s.objem, 4) + ' m³</td></tr>';
-    h += '<tr class="sum"><td></td><td class="n">' + b.sucty.podstKs + ' ks</td><td></td><td></td><td class="n">' + fmt(b.sucty.podstObjem, 3) + ' m³</td></tr></tbody></table>';
+    if (res.bezPodstupnic) h += '<h3>Podstupnice</h3><p class="note">Bez podstupníc – otvorené schody.</p>';
+    else {
+      h += '<h3>Podstupnice</h3><table class="tb"><thead><tr><th class="n">Č.</th><th class="n">Dĺžka</th><th class="n">Výška</th><th class="n">Hrúbka</th><th class="n">Objem</th></tr></thead><tbody>';
+      for (const s of b.podst) h += '<tr><td class="n">' + s.n + '</td><td class="n">' + fmt(s.dlzka) + '</td><td class="n">' + fmt(s.vyska) + '</td><td class="n">' + fmt(s.hrubka) + '</td><td class="n">' + fmt(s.objem, 4) + ' m³</td></tr>';
+      h += '<tr class="sum"><td></td><td class="n">' + b.sucty.podstKs + ' ks</td><td></td><td></td><td class="n">' + fmt(b.sucty.podstObjem, 3) + ' m³</td></tr></tbody></table>';
+    }
     h += '<h3>Schodnice</h3><table class="tb"><thead><tr><th>Názov</th><th>Stupne</th><th class="n">Prírez d × š × t</th><th class="n">Objem</th></tr></thead><tbody>';
     for (const s of b.schodnice) h += '<tr><td>' + s.nazov + '</td><td>' + s.stupne + '</td><td class="n">' + fmt(s.dlzka) + ' × ' + fmt(s.sirka) + ' × ' + fmt(s.hrubka) + '</td><td class="n">' + fmt(s.objem, 3) + ' m³</td></tr>';
     h += '</tbody></table><p class="note">Prírezy stupňov sú obdĺžniky natočené podľa nástupnej hrany (vrátane presahu), bez prídavkov na opracovanie. Podstupnica: výška = h − hrúbka stupňa; prvá siaha na hrubú podlahu, posledná po hrubú podlahu hore. Schodnica: orientačný prírez rozvinutého tvaru.</p>';
@@ -756,7 +777,10 @@
       const bb = D.itemsBBox(d.items);
       h += '<div class="bocCard' + (b.key === bocSel ? ' on' : '') + '" data-k="' + b.key + '"><header><b>' + b.id + ' · ' + esc(b.nazov) + '</b><span>st. ' + b.stupne + ' · prírez ' + fmt(b.prirez.dlzka) + ' × ' + fmt(b.prirez.sirka) + ' × ' + fmt(b.hrubka) + ' mm</span>' +
         (b.oblukova ? '<span class="warnTag">oblúková – CNC len rozvinutá, ohýbaná bočnica</span>' : '') +
-        '<button class="btnS" data-dxf="' + b.id + '">DXF</button></header>' + D.toSVG(d.items, bb, { pad: ts * 2 }) + '</div>';
+        '<button class="btnS" data-dxf="' + b.id + '">DXF</button></header>' + D.toSVG(d.items, bb, { pad: ts * 2 }) +
+        '<details class="drTab"><summary>Tabuľka drážok (' + b.drazky.length + ') – x / y od ľavého dolného rohu prírezu</summary><table class="tb"><thead><tr><th>Drážka</th><th class="n">x</th><th class="n">y</th><th class="n">Dĺžka</th><th class="n">Šírka</th><th class="n">Hĺbka</th></tr></thead><tbody>' +
+        D.bocnicaTab(b).map(r => '<tr><td>' + r.oz + '</td><td class="n">' + fmt(r.x, 1) + '</td><td class="n">' + fmt(r.y, 1) + '</td><td class="n">' + fmt(r.dlzka, 1) + '</td><td class="n">' + fmt(r.sirka, 1) + '</td><td class="n">' + fmt(r.hlbka) + '</td></tr>').join('') +
+        '</tbody></table></details></div>';
     }
     list.innerHTML = h;
     list.querySelectorAll('[data-dxf]').forEach(btn => btn.addEventListener('click', e => {

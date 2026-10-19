@@ -887,7 +887,10 @@
     // drážka podstupnice v bočnici: šikmý prienik → predĺženie o hĺbku / sin(uhla)
     const sinAt = (path, e, s) => { const tg = pathTangent(path, s), d = norm(sub(e.Q, e.P)); return Math.max(0.25, Math.abs(cross(tg, d))); };
     const dPod = P.drazkaPodst === 'ano' ? Math.max(0, P.drazkaHlbka) : 0;
-    res.risers = edges.map(e => ({
+    // bez podstupníc (otvorené schody) – žiadne dielce ani drážky podstupníc
+    const bezPodst = !!(P.viz && P.viz.podstupnice === 'ziadne');
+    res.bezPodstupnic = bezPodst;
+    res.risers = bezPodst ? [] : edges.map(e => ({
       n: e.i + 1, P: e.P, Q: e.Q,
       dlzka: dist(e.P, e.Q) + (dPod ? dPod / sinAt(wall, e, e.u) + (P.typ !== 'tocite' ? dPod / sinAt(inner, e, e.t) : 0) : 0),
       sinU: sinAt(wall, e, e.u), sinT: P.typ !== 'tocite' ? sinAt(inner, e, e.t) : 1,
@@ -1224,7 +1227,7 @@
         for (const g of U.drazky) {
           const x0 = Math.max(g.x0, band.x0, pb.minX), x1 = Math.min(g.x1, band.x1, pb.maxX);
           if (x1 - x0 < 2 || g.y1 < pb.minY || g.y0 > pb.maxY) continue;
-          gs.push({ typ: g.typ, n: g.n, verts: roundRect(x0, x1, g.y0, g.y1, rF, x0 === g.x0, x1 === g.x1), lab: v((x0 + x1) / 2, (g.y0 + g.y1) / 2) });
+          gs.push({ typ: g.typ, n: g.n, verts: roundRect(x0, x1, g.y0, g.y1, rF, x0 === g.x0, x1 === g.x1), lab: v((x0 + x1) / 2, (g.y0 + g.y1) / 2), x0, x1, y0: g.y0, y1: g.y1 });
         }
         const mx = q => v(mirror ? -q.x : q.x, q.y);
         const mv = vs => vs.map(q => ({ x: mirror ? -q.x : q.x, y: q.y, b: mirror ? -q.b : q.b }));
@@ -1244,7 +1247,9 @@
           sirka: band.sirka, nad: band.nad, pod: band.pod, plynula: !!band.plynula, predZ: band.predZ, predK: band.predK, upravena: band.upravena,
           stupne: stupne.length ? Math.min.apply(null, stupne) + '–' + Math.max.apply(null, stupne) : (band.od + '–' + band.po),
           obrys: pts.map(q => { const r = tf(q); return { x: r.x, y: r.y, b: 0 }; }),
-          drazky: gs.map(g => ({ typ: g.typ, n: g.n, hlbka: dc, verts: tfv(mv(g.verts)), lab: tf(mx(g.lab)) })),
+          // ref = horný roh drážky na nástupnej strane (x, y od ľavého dolného rohu prírezu), dlzka × sirka = rozmer drážky
+          drazky: gs.map(g => ({ typ: g.typ, n: g.n, hlbka: dc, verts: tfv(mv(g.verts)), lab: tf(mx(g.lab)), ref: tf(mx(v(g.x0, g.y1))), dlzka: g.x1 - g.x0, sirka: g.y1 - g.y0 })),
+          uholDrazok: Math.abs(best.a / DEG),
           prirez: { dlzka: best.bb.w + 2 * o, sirka: best.bb.h + 2 * o, okraj: o },
           dlzkaTvaru: best.bb.w, hrubka: P.hrubkaSchodnice
         });
