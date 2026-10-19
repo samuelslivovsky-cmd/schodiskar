@@ -144,7 +144,8 @@ console.log('— špecifické kontroly');
   for (const t of r.treads) {
     near(t.sirky.vnutri, r.b, 1e-6, 'rovné: vnútri = b');
     near(t.sirky.vonku, r.b, 1e-6, 'rovné: vonku = b');
-    near(t.prirez.dlzka, 900, 1e-6, 'rovné: prírez dĺžka = W');
+    near(t.prirez.dlzka, 900 - 2 * 60 + 2 * 15, 1e-6, 'rovné: prírez dĺžka = W − 2 bočnice + 2 čapy');
+    near(r.W, 900 - 2 * 60, 1e-6, 'rovné: svetlá šírka medzi bočnicami');
     near(t.prirez.sirka, r.b + 30, 1e-6, 'rovné: prírez šírka = b + presah');
   }
   near(r.b, 3800 / (r.N - 1), 1e-9, 'rovné: b = L/(N-1)');
@@ -157,7 +158,7 @@ console.log('— špecifické kontroly');
   const d = r.treads.map(t => t.sirky.vnutri);
   const tot = d.reduce((a, b) => a + b, 0);
   near(tot, r.edges[r.N - 1].t - r.edges[0].t, 1e-6, 'L: súčet šírok vnútri = dĺžka vnútornej hrany');
-  near(r.edges[r.N - 1].t, 1700 + 1700, 1e-6, 'L: dĺžka vnútornej hrany ostrý roh');
+  near(r.edges[r.N - 1].t, 1700 + 1700 + 2 * 60, 1e-6, 'L: dĺžka vnútornej hrany ostrý roh');
   // monotónne do rohu a späť
   const mi = d.indexOf(Math.min.apply(null, d));
   let mono = true;
@@ -183,7 +184,7 @@ console.log('— špecifické kontroly');
   const r = results['točité 360°'];
   for (const e of r.edges) near(e.P.x * e.Q.y - e.P.y * e.Q.x, 0, 1e-6, 'točité: hrana radiálna');
   const dth = 360 / (r.N - 1);
-  near(r.treads[0].sirky.vystup, (100 + 450) * dth * Math.PI / 180, 1e-6, 'točité: b na výstupnej čiare');
+  near(r.treads[0].sirky.vystup, (100 + (900 - 60) / 2) * dth * Math.PI / 180, 1e-6, 'točité: b na výstupnej čiare');
   ok(r.checks.some(c => c.id === 'podchod'), 'točité: kontrola podchodnej výšky');
   console.log('  podchodná výška:', Math.round(r.podchod));
 }
@@ -204,7 +205,7 @@ console.log('— špecifické kontroly');
 {
   const r = results['U zrkadlo 150'];
   ok(r.eq.length >= 1, 'U: vyrovnanie');
-  near(r.edges[r.N - 1].t, (2200 - 900) * 2 + 150, 1e-6, 'U: dĺžka vnútornej hrany');
+  near(r.edges[r.N - 1].t, (2200 - 900 + 60) * 2 + 150 + 2 * 60, 1e-6, 'U: dĺžka vnútornej hrany');
 }
 {
   // vyrovnanie – samostatná funkcia
@@ -302,5 +303,59 @@ console.log('— špecifické kontroly');
   ok(!C.compute({ typ: 'rovne' }).geom.ramena && !C.compute({ typ: 'tocite' }).geom.ramena, 'rovné a točité bez ramien');
 }
 
+{
+  // bočnice pre CNC: drážky vnútri obrysu a v prírezе, čapy stupňov = dĺžka drážok
+  const inPoly = (pt, poly) => {
+    let ins = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const a = poly[i], b = poly[j];
+      if ((a.y > pt.y) !== (b.y > pt.y) && pt.x < (b.x - a.x) * (pt.y - a.y) / (b.y - a.y) + a.x) ins = !ins;
+    }
+    return ins;
+  };
+  for (const [typ, o] of [['rovne', {}], ['L', {}], ['L', { smer: 'vpravo', r: 200 }], ['U', {}], ['U3', { R1: 2170, S: 3370, R2: 1110 }], ['Lp', {}], ['Up', { R1: 2900, R2: 2900, M: 200 }], ['tocite', {}]]) {
+    const r = C.compute(Object.assign({ typ }, o));
+    const tag = 'bočnice ' + typ + (o.smer ? ' ' + o.smer : '');
+    ok(r.bocnice && r.bocnice.length >= 1, tag + ': dielce');
+    let groovesIn = true, inBlank = true, nG = 0;
+    for (const b of r.bocnice) {
+      for (const q of b.obrys) if (q.x < b.prirez.okraj - 1e-6 || q.y < b.prirez.okraj - 1e-6 || q.x > b.prirez.dlzka - b.prirez.okraj + 1e-6 || q.y > b.prirez.sirka - b.prirez.okraj + 1e-6) inBlank = false;
+      for (const g of b.drazky) {
+        nG++;
+        const c = g.verts.reduce((a, q) => ({ x: a.x + q.x / g.verts.length, y: a.y + q.y / g.verts.length }), { x: 0, y: 0 });
+        if (!inPoly(c, b.obrys)) groovesIn = false;
+      }
+    }
+    ok(inBlank, tag + ': obrys v prírezе s prídavkom');
+    ok(groovesIn, tag + ': stredy drážok vnútri bočnice');
+    const nStup = r.bocnice.reduce((a, b) => a + b.drazky.filter(g => g.typ === 'stupen').length, 0);
+    const sides = typ === 'tocite' ? 1 : 2;
+    ok(nStup >= sides * (r.N - 1), tag + ': drážka pre každý stupeň na každej bočnici (' + nStup + ')');
+  }
+  const r0 = C.compute({ typ: 'rovne', spoj: 'ziadna', drazkaPodst: 'nie' });
+  ok(r0.bocnice.every(b => !b.drazky.length) && Math.abs(r0.treads[0].prirez.dlzka - (900 - 2 * 60)) < 1e-6, 'bez drážok: stupne bez čapov');
+  const rc = C.compute({ typ: 'rovne', capOdsadenie: 20, drazkaHlbka: 12, vola: 0 });
+  const g = rc.bocnice[1].drazky.find(q => q.typ === 'stupen');
+  const xs = g.verts.map(q => q.x), ys = g.verts.map(q => q.y);
+  near(Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) > 0, true, 0, 'čap: drážka má rozmer');
+  near(rc.treads[0].prirez.dlzka, 900 - 2 * 60 + 24, 1e-6, 'čap: stupeň dlhší o 2 × hĺbku drážky');
+}
+
 console.log('\n' + passes + ' OK, ' + fails + ' chýb');
 process.exit(fails ? 1 : 0);
+{
+  // šírka ramena bez bočníc (pôvodné správanie)
+  const r = C.compute({ typ: 'rovne', W: 900, wBoc: 'nie' });
+  for (const t of r.treads) near(t.prirez.dlzka, 900 + 2 * 15, 1e-6, 'wBoc=nie: prírez = W + 2 čapy');
+  // L: líce bočnice pri stene je o hrúbku bočnice od steny
+  const L = C.compute({ typ: 'L', W: 900, hrubkaSchodnice: 40 });
+  near(L.W, 820, 1e-6, 'L: svetlá šírka 900 − 2·40');
+  near(L.geom.wall[0].y, 40, 1e-6, 'L: líce bočnice 40 mm od steny');
+  near(L.geom.wallReal[0].y, 0, 1e-6, 'L: stena ostáva na mieste');
+}
+{
+  const r = C.compute({ typ: 'L', podlahaDole: 1300 });
+  ok(r.errors.some(e => /vrstva dole/.test(e)) && !r.unfold, 'nášľapná vrstva dole > h: chyba, bez bočníc pod podlahou');
+  const r2 = C.compute({ typ: 'L', podlahaDole: 15, podlahaHore: 15 });
+  ok(!r2.errors.length && r2.bocnice.length, 'bežná nášľapná vrstva prejde');
+}

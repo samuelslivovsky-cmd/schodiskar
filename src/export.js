@@ -34,7 +34,13 @@
           objem: sh.prirez.dlzka * sh.prirez.sirka * inp.hrubkaSchodnice / 1e9
         }));
       };
-      if (inp.typ === 'tocite') {
+      if (res.bocnice && res.bocnice.length) {
+        for (const b of res.bocnice) schodnice.push({
+          nazov: b.id + ' ' + b.nazov + (b.oblukova ? ' (oblúková)' : ''), stupne: b.stupne,
+          dlzka: b.prirez.dlzka, sirka: b.prirez.sirka, hrubka: b.hrubka, objem: b.prirez.dlzka * b.prirez.sirka * b.hrubka / 1e9
+        });
+        if (inp.typ === 'tocite') schodnice.push({ nazov: 'Stĺp (vreteno) Ø ' + fmt(2 * inp.Rs), stupne: '1–' + (res.N - 1), dlzka: inp.H, sirka: 2 * inp.Rs, hrubka: 2 * inp.Rs, objem: Math.PI * inp.Rs * inp.Rs * inp.H / 1e9 });
+      } else if (inp.typ === 'tocite') {
         add('vonkajsia', 'Vonkajšia schodnica (rozvinutá, zakrivená)');
         schodnice.push({ nazov: 'Stĺp (vreteno) Ø ' + fmt(2 * inp.Rs), stupne: '1–' + (res.N - 1), dlzka: inp.H, sirka: 2 * inp.Rs, hrubka: 2 * inp.Rs, objem: Math.PI * inp.Rs * inp.Rs * inp.H / 1e9 });
       } else {
@@ -91,7 +97,7 @@
     const put = (t, nazov, p) => { if (!(p.w > 1 && p.h > 1)) return; const g = byT[t] || (byT[t] = { hrubka: t, nazvy: [], pieces: [] }); if (g.nazvy.indexOf(nazov) < 0) g.nazvy.push(nazov); g.pieces.push(p); };
     for (const q of stupne) put(inp.hrubka, 'stupne', { n: (q.druh === 'podesta' ? 'P' : 'S') + q.n, w: q.dlzka, h: q.sirka });
     for (const q of podst) put(inp.hrubkaPodst, 'podstupnice', { n: 'Pd' + q.n, w: q.dlzka, h: q.vyska });
-    schodnice.forEach((q, i) => { if (!/^Stĺp/.test(q.nazov)) put(inp.hrubkaSchodnice, 'schodnice', { n: 'Sch' + (i + 1), w: q.dlzka, h: q.sirka }); });
+    schodnice.forEach((q, i) => { if (!/^Stĺp/.test(q.nazov)) put(inp.hrubkaSchodnice, 'bočnice', { n: (q.nazov.match(/^B\d+/) || ['Sch' + (i + 1)])[0], w: q.dlzka, h: q.sirka }); });
     return Object.keys(byT).map(Number).sort((a, b) => b - a).map(t => Object.assign({ hrubka: t, nazvy: byT[t].nazvy }, C.nest(byT[t].pieces, D, S, kerf)));
   }
 
@@ -171,12 +177,13 @@
       .replace(/≥/g, '>=').replace(/≤/g, '<=').replace(/⌒/g, '').replace(/▲/g, '^').replace(/–/g, '-').replace(/[\r\n]/g, ' ');
   }
 
-  function dxfEntities(items, w, dash) {
+  function dxfEntities(items, w, layers) {
+    layers = layers || D.LAYERS;
     const n = x => (Math.round(x * 1e4) / 1e4).toString();
     for (const it of items) {
       if (it.noExport) continue;
       const lt = it.dash === '-' ? 'DASHED' : it.dash === '-.' ? 'DASHDOT' : null;
-      const layerLt = (D.LAYERS.find(l => l.name === it.L) || {}).lt;
+      const layerLt = (layers.find(l => l.name === it.L) || {}).lt;
       const ltCode = lt && lt !== layerLt ? ['6', lt] : (!lt && layerLt !== 'CONTINUOUS' ? ['6', 'CONTINUOUS'] : []);
       if (it.k === 'pl') {
         if (it.v.length < 2) continue;
@@ -227,11 +234,30 @@
   }
 
   function dxf(res) {
-    const lines = [];
-    const w = (...a) => { for (const x of a) lines.push(String(x)); };
     const L = dxfLayout(res);
     const all = [];
     for (const s of L.sections) all.push(...D.moveItems(s.items, s.dx, s.dy));
+    return dxfWrite(all, D.LAYERS);
+  }
+
+  // CNC: bočnice v prírezoch vedľa seba (alebo jedna podľa id), počiatok v ľavom dolnom rohu prírezu
+  function dxfBocnice(res, id) {
+    const list = (res.bocnice || []).filter(b => !id || b.id === id);
+    const all = [];
+    let y = 0;
+    for (const b of list) {
+      const its = D.bocnica(res, b, 10, { dims: false }).items;
+      its.push({ k: 'tx', x: 0, y: b.prirez.sirka + 30, s: b.id + ' ' + b.nazov + ' st. ' + b.stupne + ' hr. ' + fmt(b.hrubka) + ' - pohlad na stranu s drazkami', h: 25, L: 'POPIS', al: 'l', ang: 0 });
+      all.push(...D.moveItems(its, 0, y));
+      y -= b.prirez.sirka + 200;
+    }
+    const d = list.length && list[0].drazky.length ? fmt(list[0].drazky[0].hlbka, 1).replace(',0', '').replace(',', '_') : '0';
+    return dxfWrite(all, D.CNC_LAYERS(d));
+  }
+
+  function dxfWrite(all, layers) {
+    const lines = [];
+    const w = (...a) => { for (const x of a) lines.push(String(x)); };
     const bb = D.itemsBBox(all) || { minX: 0, minY: 0, maxX: 1000, maxY: 1000 };
     const n = x => (Math.round(x * 1e3) / 1e3).toString();
     // HEADER
@@ -260,9 +286,9 @@
       '0', 'LTYPE', '2', 'DASHED', '70', '0', '3', '__ __ __', '72', '65', '73', '2', '40', '45.0', '49', '30.0', '49', '-15.0',
       '0', 'LTYPE', '2', 'DASHDOT', '70', '0', '3', '__ . __ .', '72', '65', '73', '4', '40', '80.0', '49', '50.0', '49', '-15.0', '49', '0.0', '49', '-15.0',
       '0', 'ENDTAB');
-    w('0', 'TABLE', '2', 'LAYER', '70', String(D.LAYERS.length + 1),
+    w('0', 'TABLE', '2', 'LAYER', '70', String(layers.length + 1),
       '0', 'LAYER', '2', '0', '70', '0', '62', '7', '6', 'CONTINUOUS');
-    for (const l of D.LAYERS) w('0', 'LAYER', '2', l.name, '70', '0', '62', String(l.color), '6', l.lt);
+    for (const l of layers) w('0', 'LAYER', '2', l.name, '70', '0', '62', String(l.color), '6', l.lt);
     w('0', 'ENDTAB');
     w('0', 'TABLE', '2', 'STYLE', '70', '1',
       '0', 'STYLE', '2', 'STANDARD', '70', '0', '40', '0.0', '41', '1.0', '50', '0.0', '71', '0', '42', '2.5', '3', 'txt', '4', '',
@@ -270,7 +296,7 @@
     w('0', 'ENDSEC');
     w('0', 'SECTION', '2', 'BLOCKS', '0', 'ENDSEC');
     w('0', 'SECTION', '2', 'ENTITIES');
-    dxfEntities(all, w);
+    dxfEntities(all, w, layers);
     w('0', 'ENDSEC', '0', 'EOF');
     // skupinový kód odsadený podľa konvencie
     const out = [];
@@ -286,6 +312,7 @@
   const PAGE = { w: 420, h: 297, m: 10 };
   const SCALES = [10, 20, 25, 50, 100, 200];
   const COLORS = {
+    priRez: [248, 250, 252], bocnica: [239, 226, 207], drazka: [165, 216, 230], drazkaP: [203, 233, 240], cap: [125, 196, 216], CAPY: [14, 116, 144], REZ_OBRYS: [29, 39, 51], PRIREZ: [148, 163, 184], POPIS: [21, 94, 117],
     stena: [217, 221, 227], stupen: [244, 239, 230], podesta: [231, 239, 224], schodnica: [240, 228, 212],
     STENA: [75, 85, 99], VYSTUPNA_CIARA: [194, 65, 12], KOTY: [47, 125, 79], PODSTUPNICE: [100, 116, 139], SCHODNICA: [138, 90, 43], STROP: [124, 58, 237], RAMENA: [220, 38, 38], err: [220, 38, 38]
   };
@@ -328,7 +355,7 @@
           if (it.v.length < 2) continue;
           const pts = C.sampleVerts(it.v, it.c, 3 * DEG).map(T);
           const fill = it.fill && it.fill !== 'cur' ? COLORS[it.fill] : null;
-          const col = it.err ? COLORS.err : (COLORS[it.L] || [29, 39, 51]);
+          const col = it.err ? COLORS.err : (COLORS[it.L] || (/^DRAZKA/.test(it.L) ? [14, 116, 144] : [29, 39, 51]));
           let style = 'S';
           if (it.fill === 'cur') { doc.setFillColor(col[0], col[1], col[2]); style = 'F'; }
           else if (fill) { doc.setFillColor(fill[0], fill[1], fill[2]); style = it.lw === 'none' ? 'F' : 'FD'; }
@@ -352,7 +379,7 @@
           doc.circle(c.x, c.y, it.r / scale, fill ? 'FD' : 'S');
         } else if (it.k === 'tx') {
           const c = T(it);
-          const col = it.L === 'KOTY' || it.L === 'STROP' || it.L === 'RAMENA' ? COLORS[it.L] : [29, 39, 51];
+          const col = ['KOTY', 'STROP', 'RAMENA', 'POPIS'].indexOf(it.L) >= 0 ? COLORS[it.L] : [29, 39, 51];
           doc.setTextColor(col[0], col[1], col[2]);
           ptext(it.s, c.x, c.y, it.h / scale, { al: it.al, ang: it.ang, vmid: it.vmid, bold: it.bold });
           doc.setTextColor(0, 0, 0);
@@ -542,6 +569,33 @@
       }
     }
 
+    // --- listy: bočnice pre CNC
+    if (res.bocnice && res.bocnice.length) {
+      const bs = res.bocnice;
+      const aw = PAGE.w - 2 * PAGE.m - 16, ah = PAGE.h - 2 * PAGE.m - 56;
+      const maxL = Math.max.apply(null, bs.map(b => b.prirez.dlzka));
+      const S = [10, 20, 25, 50].find(sc => maxL / sc <= aw - 10) || 50;
+      const rows = [];
+      let pg = [], y = 0;
+      for (const b of bs) {
+        const hh = b.prirez.sirka / S + 16;
+        if (pg.length && y + hh > ah) { rows.push(pg); pg = []; y = 0; }
+        pg.push({ b, y }); y += hh;
+      }
+      if (pg.length) rows.push(pg);
+      rows.forEach((list, pi) => pages.push(() => {
+        ptext('BOČNICE – CNC', PAGE.m + 5, PAGE.m + 8, 4, { al: 'l', bold: true });
+        ptext('Pohľad na stranu s drážkami. Hrubo = rez obrysu, modro = drážky hĺbky ' + fmt(inp.drazkaHlbka) + ' mm (S = stupeň, P = podstupnica), čiarkovane = prírez s prídavkom ' + fmt(inp.bocOkraj) + ' mm.', PAGE.m + 62, PAGE.m + 8, 2.3, { al: 'l' });
+        for (const it of list) {
+          const ox = PAGE.m + 8, oy = PAGE.m + 20 + it.y + 4;
+          const its = D.bocnica(res, it.b, S, { fill: true });
+          const T = q => ({ x: ox + q.x / S, y: oy + (it.b.prirez.sirka - q.y) / S });
+          drawItems(its.items, T, S);
+        }
+        return { vykres: 'Bočnice – CNC' + (rows.length > 1 ? ' (' + (pi + 1) + '/' + rows.length + ')' : ''), mierka: '1 : ' + S };
+      }));
+    }
+
     // --- list: rozpis materiálu
     pages.push(() => {
       const b = bom(res);
@@ -681,5 +735,5 @@
     throw new Error('Súbor neobsahuje projekt Schodiskára.');
   }
 
-  return { bom, csv, dxf, pdf, paramRows, projectJSON, parseProject, encodeCP1250 };
+  return { bom, csv, dxf, dxfBocnice, pdf, paramRows, projectJSON, parseProject, encodeCP1250 };
 });

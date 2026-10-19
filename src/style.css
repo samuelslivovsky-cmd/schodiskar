@@ -102,6 +102,16 @@ details.grp[open] summary { margin-bottom: 10px; }
 .msg { border-radius: 6px; padding: 8px 12px; font-size: 13px; border-left: 4px solid; }
 .msg.err { background: var(--err-bg); border-color: var(--err); color: #7f1d1d; }
 .msg.warn { background: var(--warn-bg); border-color: var(--warn); color: #78350f; }
+.msg.err { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.msg.err > span { flex: 1 1 320px; }
+.msgBtn { border: 1px solid #fca5a5; background: #fff; color: #7f1d1d; border-radius: 5px; padding: 3px 9px; font: 600 12px var(--sans); cursor: pointer; }
+.msgBtn:hover { border-color: var(--err); }
+.msgBtn.fix { background: var(--err); border-color: var(--err); color: #fff; }
+.msgBtn.fix:hover { filter: brightness(1.1); }
+.fld.errFld label { color: var(--err); }
+.fld.errFld .inp input, .fld.errFld select { border-color: var(--err); background: var(--err-bg); }
+.fld.blink { animation: fldBlink 1.2s ease 2; border-radius: 6px; }
+@keyframes fldBlink { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 40% { box-shadow: 0 0 0 4px #fca5a5; } }
 
 /* záložky */
 .tabs { display: flex; gap: 2px; padding: 10px 16px 0; border-bottom: 1px solid var(--line-2); overflow-x: auto; }
@@ -163,9 +173,20 @@ svg.vykres .hov { stroke: none; cursor: crosshair; }
 svg.vykres .hov:hover, svg.vykres .hov.hl { fill: var(--sel); }
 svg.vykres text { font-family: "DejaVu Sans", "Segoe UI", Arial, sans-serif; fill: #1d2733; pointer-events: none; }
 svg.vykres .T-KOTY { fill: #2f7d4f; }
+svg.vykres .T-CAPY { fill: #0e7490; }
 svg.vykres .L-STROP { stroke: #7c3aed; }
 svg.vykres .T-STROP { fill: #7c3aed; }
 svg.vykres .L-RAMENA { stroke: #dc2626; }
+svg.vykres .L-PRIREZ { stroke: #94a3b8; }
+svg.vykres .f-priRez { fill: #f8fafc; }
+svg.vykres .L-REZ_OBRYS { stroke: #1d2733; }
+svg.vykres .f-bocnica { fill: #efe2cf; }
+svg.vykres [class*="L-DRAZKA"] { stroke: #0e7490; }
+svg.vykres .f-drazka { fill: #a5d8e6; }
+svg.vykres .f-drazkaP { fill: #cbe9f0; }
+svg.vykres .L-CAPY { stroke: #0e7490; }
+svg.vykres .f-cap { fill: #7dc4d8; }
+svg.vykres .T-POPIS { fill: #155e75; }
 svg.vykres .T-RAMENA { fill: #dc2626; }
 svg.vykres .b { font-weight: 700; }
 
@@ -274,6 +295,24 @@ svg.board .pc { fill: #f4e9d6; stroke: #8a5a2b; stroke-width: 1px; vector-effect
 svg.board .pc:hover { fill: var(--sel); }
 svg.board text { fill: #3b2a18; font-family: var(--sans); font-weight: 600; pointer-events: none; }
 
+/* bočnice – CNC editor */
+.boc { display: grid; grid-template-columns: 290px 1fr; min-height: 100%; }
+.bocForm { padding: 14px 16px; border-right: 1px solid var(--line); background: var(--panel); display: grid; gap: 8px; align-content: start; }
+.bocForm h3 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); }
+.bocForm select { width: 100%; font: 500 13.5px var(--sans); padding: 5px 8px; border: 1px solid var(--line-2); border-radius: 6px; background: #fff; }
+.bocList { padding: 14px 16px; display: grid; gap: 14px; align-content: start; }
+.bocList .parts { padding: 0; }
+.bocHead { display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: 13px; }
+.bocCard { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fff; }
+.bocCard header { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; font-size: 13px; margin-bottom: 6px; }
+.bocCard header span { color: var(--ink-2); }
+.bocCard header .btnS { margin-left: auto; }
+.bocCard svg.vykres { width: 100%; height: auto; max-height: 340px; display: block; }
+.warnTag { color: #92400e !important; background: var(--warn-bg); border-radius: 5px; padding: 1px 7px; font-size: 12px; }
+.btnS { border: 1px solid var(--line-2); background: #fff; border-radius: 7px; padding: 5px 12px; font: 600 12.5px var(--sans); cursor: pointer; color: var(--ink); white-space: nowrap; }
+.btnS:hover { border-color: var(--accent); }
+@media (max-width: 900px) { .boc { grid-template-columns: 1fr; } .bocForm { border-right: 0; border-bottom: 1px solid var(--line); } }
+
 /* šípky pri číselných poliach */
 .inp.sp input { padding-right: 50px; }
 .inp.sp .u { right: 28px; }
@@ -303,3 +342,25 @@ svg.board text { fill: #3b2a18; font-family: var(--sans); font-weight: 600; poin
 .tour-pop .tour-next:hover { background: #fbbf24; }
 .tour-pop .tour-skip { border: 0; padding: 6px 4px; color: var(--muted); font-weight: 500; }
 @media (prefers-reduced-motion: reduce) { .tour-hole { transition: none; } .tour.interactive .tour-hole { animation: none; } }
+
+/* editor bočníc na výkrese (polia s vynášacími čiarami) */
+.bocEd { display: grid; gap: 10px; }
+.bocEdBar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; padding: 8px 12px; background: #f1f5fb; border: 1px solid #d6e0ef; border-radius: 8px; }
+.bocEdBar span { margin-right: auto; }
+.bocSide { border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden; }
+.bocSideH { font: 600 12px var(--sans); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); padding: 8px 12px 0; }
+.bocStage { position: relative; padding: 50px 8px; }
+.bocStage svg.vykres { width: 100%; height: auto; max-height: 380px; display: block; }
+.bocStage .pk { cursor: pointer; }
+.bocStage .pk:hover { fill: #d9c3a5; }
+.bocStage svg.bocLead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.bocLead .ld { stroke: #64748b; stroke-width: 1; fill: none; }
+.bocLead .dm { stroke: #2563eb; stroke-width: 1.4; fill: none; }
+.bocLead .dt { fill: #2563eb; }
+.bocFld { position: absolute; display: flex; align-items: center; gap: 4px; background: #fff; border: 1px solid #c7d2e3; border-radius: 6px; padding: 2px 4px 2px 7px; font-size: 11.5px; color: var(--ink-2); white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,.06); z-index: 1; }
+.bocFld input { width: 54px; font: 600 12.5px var(--mono); border: 1px solid var(--line-2); border-radius: 4px; padding: 2px 4px; text-align: right; }
+.bocFld input.own { border-color: #2563eb; background: #eef4ff; }
+.bocFld input.bad { border-color: var(--err); background: var(--err-bg); }
+.bocFld i { font-style: normal; color: var(--muted); }
+.bocCard header { cursor: pointer; }
+.bocCard.on { border-color: #2563eb; box-shadow: 0 0 0 2px #bcd3f5; }

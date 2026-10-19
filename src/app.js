@@ -94,7 +94,7 @@
     input = C.normalize(raw);
   })();
   let res = null;
-  const TABS = ['plan', '3d', 'unfold', 'parts', 'bom', 'checks'];
+  const TABS = ['plan', '3d', 'unfold', 'parts', 'boc', 'bom', 'checks'];
   let tab = TABS.indexOf(location.hash.slice(1)) >= 0 ? location.hash.slice(1) : 'plan';
   let viewBoxState = {};
 
@@ -137,19 +137,21 @@
         '<div class="inp' + (wide ? '' : ' sp') + '"><input id="in-' + k + '" data-key="' + k + '" ' + (wide ? '' : 'inputmode="decimal" data-min="0" data-step="' + (['N', 'nb'].includes(k) ? 1 : 10) + '" ') + 'autocomplete="off" spellcheck="false">' +
         (unit ? '<span class="u">' + unit + '</span>' : '') + (wide ? '' : SPIN) + '</div></div>').join('');
     }
-    document.querySelectorAll('input[data-key]').forEach(inp => {
-      inp.addEventListener('input', () => onField(inp));
-      inp.addEventListener('change', () => onField(inp, true));
-      inp.addEventListener('keydown', e => {
-        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
-        const k = inp.dataset.key;
-        if (typeof getK(k) !== 'number') return;
-        e.preventDefault();
-        const step = e.shiftKey ? 100 : (['N', 'nb'].includes(k) ? 1 : 10);
-        const v = (parseNum(inp.value) || 0) + (e.key === 'ArrowUp' ? step : -step);
-        inp.value = String(Math.max(0, Math.round(v * 100) / 100)).replace('.', ',');
-        onField(inp, true);
-      });
+    document.querySelectorAll('input[data-key]').forEach(bindInput);
+  }
+
+  function bindInput(inp) {
+    inp.addEventListener('input', () => onField(inp));
+    inp.addEventListener('change', () => onField(inp, true));
+    inp.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      const k = inp.dataset.key;
+      if (typeof getK(k) !== 'number') return;
+      e.preventDefault();
+      const step = (+inp.dataset.step || (['N', 'nb'].includes(k) ? 1 : 10)) * (e.shiftKey ? 10 : 1);
+      const v = (parseNum(inp.value) || 0) + (e.key === 'ArrowUp' ? step : -step);
+      inp.value = String(Math.max(0, Math.round(v * 100) / 100)).replace('.', ',');
+      onField(inp, true);
     });
   }
 
@@ -177,6 +179,7 @@
       inp.value = typeof v === 'number' ? String(v).replace('.', ',') : (v || '');
       inp.classList.remove('bad');
     });
+    document.querySelectorAll('select[data-key]').forEach(s => { s.value = getK(s.dataset.key); });
     document.querySelectorAll('#types button').forEach(b => { const on = b.dataset.typ === input.typ; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
     document.querySelectorAll('#dirRow button').forEach(b => { const on = b.dataset.smer === input.smer; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
     $('#dirRow').hidden = input.typ === 'rovne';
@@ -232,8 +235,35 @@
     h += '<div class="status ' + res.stav + '">' + st + '</div>';
     s.innerHTML = h;
     const m = $('#msgs');
-    m.innerHTML = res.errors.map(e => '<div class="msg err">' + esc(e) + '</div>').join('') +
+    // chyby: odkaz na pole v zadaní a overené automatické opravy
+    let diag = [];
+    try { diag = res.errors.length && res.input ? C.navrhOprav(input, res) : res.errors.map(text => ({ text, pole: [], navrhy: [] })); }
+    catch (e) { console.error(e); diag = res.errors.map(text => ({ text, pole: [], navrhy: [] })); }
+    const pole = diag.filter(d => d.pole.length && fldOf(d.pole[0]));
+    m.innerHTML = diag.map((d, i) => '<div class="msg err"><span>' + esc(d.text) + '</span>' +
+        (d.pole.length && fldOf(d.pole[0]) ? '<button class="msgBtn" data-ukaz="' + i + '">Ukázať pole</button>' : '') +
+        d.navrhy.map((n, j) => '<button class="msgBtn fix" data-fix="' + i + ':' + j + '" title="Po zmene ' + (n.zostane ? 'ostane ' + n.zostane + ' iná chyba' : 'nebude žiadna chyba') + '">Opraviť: ' + esc(n.popis) + '</button>').join('') +
+        '</div>').join('') +
       res.warnings.map(e => '<div class="msg warn">' + esc(e) + '</div>').join('');
+    document.querySelectorAll('.fld.errFld').forEach(f => f.classList.remove('errFld'));
+    for (const d of pole) for (const k of d.pole) { const f = fldOf(k); if (f) f.classList.add('errFld'); }
+    m.querySelectorAll('[data-ukaz]').forEach(b => b.addEventListener('click', () => ukazPole(diag[+b.dataset.ukaz].pole[0])));
+    m.querySelectorAll('[data-fix]').forEach(b => b.addEventListener('click', () => {
+      const [i, j] = b.dataset.fix.split(':').map(Number), z = diag[i].navrhy[j].zmena;
+      for (const k of Object.keys(z)) { if (z[k] === null) delete input[k]; else setK(k, z[k]); }
+      changed(true);
+      toast('Opravené: ' + diag[i].navrhy[j].popis);
+    }));
+  }
+  // pole zadania v bočnom paneli podľa kľúča
+  function fldOf(k) { const inp = document.querySelector('#in-' + k); return inp ? inp.closest('.fld') : null; }
+  function ukazPole(k) {
+    const f = fldOf(k);
+    if (!f) return;
+    f.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    f.classList.remove('blink'); void f.offsetWidth; f.classList.add('blink');
+    const inp = f.querySelector('input, select');
+    if (inp) setTimeout(() => { inp.focus(); if (inp.select) inp.select(); }, 350);
   }
 
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -249,6 +279,7 @@
     if (tab === 'unfold') return viewUnfold(v);
     if (tab === 'parts') return viewParts(v);
     if (tab === 'bom') return viewBom(v);
+    if (tab === 'boc') return viewBoc(v);
     if (tab === 'checks') return viewChecks(v);
   }
 
@@ -606,7 +637,9 @@
   }
 
   function viewParts(v) {
-    if (!res.treads || !res.treads.length) return noData(v);
+    const capFields = [['hrubka', 'Hrúbka stupňa', 'mm', 1]].concat(BOC_FIELDS.filter(f => ['spoj', 'capHrubka', 'drazkaHlbka', 'capOdsadenie', 'capOdsadenieZad'].indexOf(f[0]) >= 0));
+    const list = sideForm(v, 'cap', 'Čapy stupňov', capFields, 'Čap = výstupok stupňa do drážky bočnice. Dĺžka po hrane stupňa = hrana − odsadenie vpredu a vzadu, hĺbka = hĺbka drážky, hrúbka centrovaná – frézuje sa (hrúbka stupňa − hrúbka čapu) / 2 z každej strany. Rovnaké hodnoty sú aj v záložke Bočnice.');
+    if (!res.treads || !res.treads.length) { list.innerHTML = '<div class="empty">Pre zadané hodnoty nie je výsledok. Opravte chyby uvedené vyššie.</div>'; return; }
     let h = '<div class="parts">';
     for (const t of res.treads) {
       const ts = Math.max(t.prirez.dlzka, t.prirez.sirka * 2.4) / 95;
@@ -617,9 +650,11 @@
         '<dl><dt>Šírka vnútri / výst. / vonku</dt><dd>' + fmt(t.sirky.vnutri) + ' / ' + fmt(t.sirky.vystup) + ' / ' + fmt(t.sirky.vonku) + '</dd>' +
         (t.sirky.kontrola != null ? '<dt>Šírka ' + input.lim.klinVzd + ' mm od vnútra</dt><dd>' + fmt(t.sirky.kontrola, 1) + '</dd>' : '') +
         '<dt>Plocha tvaru / prírezu</dt><dd>' + fmt(t.plochaSPresahom / 1e6, 3) + ' / ' + fmt(t.plochaPrirez / 1e6, 3) + ' m²</dd>' +
-        '<dt>Výška stupňa</dt><dd>+' + fmt(t.vyska) + '</dd></dl></div>';
+        '<dt>Výška stupňa</dt><dd>+' + fmt(t.vyska) + '</dd>' +
+        (t.caps || []).map(c => '<dt>Čap ' + (c.strana === 'vonku' ? 'vonku' : 'vnútri') + ' (dĺ. × hĺ. × hr.)</dt><dd>' + fmt(c.dlzka) + ' × ' + fmt(c.hlbka) + ' × ' + fmt(c.hrubka) +
+          (input.hrubka > c.hrubka ? ', frézovať 2 × ' + fmt((input.hrubka - c.hrubka) / 2, (input.hrubka - c.hrubka) % 2 ? 1 : 0) : '') + '</dd>').join('') + '</dl></div>';
     }
-    v.innerHTML = h + '</div>';
+    list.innerHTML = h + '</div>';
   }
 
   function viewBom(v) {
@@ -668,6 +703,206 @@
     $('#selZabr').addEventListener('change', e => {
       input.viz = Object.assign({}, input.viz || {}, { zabradlie: e.target.value });
       store(); commitHist(); renderView();
+    });
+  }
+
+  // ---------------------------------------------------------------- bočnice pre CNC (editor)
+  const BOC_FIELDS = [
+    ['sirkaSchodnice', 'Šírka bočnice', 'mm', 10, 'kolmo na sklon'],
+    ['hrubkaSchodnice', 'Hrúbka bočnice', 'mm', 1],
+    ['wBoc', 'Šírka ramena W a polomer', [['ano', 'vrátane bočníc'], ['nie', 'medzi bočnicami (svetlá)']]],
+    ['bocTvar', 'Tvar bočnice', [['plynula', 'plynulá – oblé napojenie'], ['rovna', 'rovné dosky po úsekoch']]],
+    ['bocNad', 'Nad hranami stupňov', 'mm', 5, 'horná hrana nad nástupnými hranami'],
+    ['bocPod', 'Pod stupňami', 'mm', 5, 'materiál pod stupňom a drážkou'],
+    ['bocZaoblenie', 'Zaoblenie prechodov', 'mm', 50, 'dĺžka vyhladenia, len plynulá'],
+    ['bocOkraj', 'Prídavok prírezu', 'mm', 5, 'na každej strane, pre upnutie a rez'],
+    ['spoj', 'Uloženie stupňa', [['cap', 'čap v drážke'], ['plna', 'celá hrúbka v drážke'], ['ziadna', 'bez drážok']]],
+    ['capHrubka', 'Hrúbka čapu', 'mm', 1, 'centrovaný v hrúbke stupňa'],
+    ['drazkaHlbka', 'Hĺbka drážky', 'mm', 1, '= dĺžka čapu'],
+    ['capOdsadenie', 'Čap od prednej hrany', 'mm', 5, 'drážka nevyjde na čelo'],
+    ['capOdsadenieZad', 'Čap od zadnej hrany', 'mm', 5, 'zub pri podstupnici'],
+    ['vola', 'Vôľa drážky', 'mm', 0.1],
+    ['freza', 'Priemer frézy', 'mm', 1, 'polomer v rohoch drážok'],
+    ['drazkaPodst', 'Drážky pre podstupnice', [['ano', 'áno'], ['nie', 'nie']]]
+  ];
+  // bočný formulár pohľadu (ostáva pri prekreslení, aby sa nestratil fokus pri písaní); vracia kontajner zoznamu
+  function sideForm(v, id, title, fields, note) {
+    let list = v.querySelector('#' + id + 'List');
+    if (list) return list;
+    v.innerHTML = '<div class="boc"><form class="bocForm" id="' + id + 'Form" onsubmit="return false"><h3>' + title + '</h3>' +
+      fields.map(([k, label, unit, step, hint]) => Array.isArray(unit)
+        ? '<div class="fld" data-types="' + ALL + '"><label for="' + id + '-' + k + '">' + label + '</label><select id="' + id + '-' + k + '" data-key="' + k + '">' + unit.map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('') + '</select></div>'
+        : '<div class="fld" data-types="' + ALL + '"><label for="' + id + '-' + k + '">' + label + (hint ? '<small>' + hint + '</small>' : '') + '</label><div class="inp sp"><input id="' + id + '-' + k + '" data-key="' + k + '" inputmode="decimal" data-min="0" data-step="' + step + '" autocomplete="off"><span class="u">' + unit + '</span>' + SPIN + '</div></div>').join('') +
+      '<p class="note">' + note + '</p></form><div class="bocList" id="' + id + 'List"></div></div>';
+    v.querySelectorAll('#' + id + 'Form input[data-key]').forEach(bindInput);
+    v.querySelectorAll('#' + id + 'Form select[data-key]').forEach(s => s.addEventListener('change', () => { setK(s.dataset.key, s.value); changed(true); }));
+    syncForm(true);
+    return v.querySelector('#' + id + 'List');
+  }
+
+  function viewBoc(v) {
+    const list = sideForm(v, 'boc', 'Bočnice a spoj', BOC_FIELDS, 'Stupne dostanú na koncoch čap, bočnice drážky rovnakého tvaru. Rohy drážok majú polomer frézy – čelo čapu zaobliť rovnako.');
+    if (!res.bocnice || !res.bocnice.length) { list.innerHTML = '<div class="empty">Pre zadané hodnoty nie sú bočnice. Opravte chyby uvedené vyššie.</div>'; return; }
+    const bs = res.bocnice;
+    if (bocSel && !bs.some(b => b.key === bocSel)) bocSel = null;
+    const nG = bs.reduce((a, b) => a + b.drazky.length, 0);
+    const kus = n => n + (n === 1 ? ' dielec' : n < 5 ? ' dielce' : ' dielcov');
+    let h = '<div class="bocHead"><div><b>' + kus(bs.length) + '</b> · ' + nG + ' drážok hĺbky ' + fmt(input.drazkaHlbka) + ' mm · hrúbka ' + fmt(input.hrubkaSchodnice) + ' mm' +
+      '<br><span class="muted">Pohľad na stranu s drážkami, dielce natočené na najmenší prírez. DXF vrstvy: REZ_OBRYS (rez naskrz), DRAZKA_H' + fmt(input.drazkaHlbka, 1).replace(',0', '').replace(',', '_') + ' (vrecká), PRIREZ, POPIS.</span></div>' +
+      '<button class="btnS" data-dxf="">DXF všetkých bočníc</button></div>' + bocEditorHTML();
+    for (const b of bs) {
+      const ts = Math.max(b.prirez.dlzka, b.prirez.sirka * 3) / 110;
+      const d = D.bocnica(res, b, ts, { fill: true, title: false });
+      const bb = D.itemsBBox(d.items);
+      h += '<div class="bocCard' + (b.key === bocSel ? ' on' : '') + '" data-k="' + b.key + '"><header><b>' + b.id + ' · ' + esc(b.nazov) + '</b><span>st. ' + b.stupne + ' · prírez ' + fmt(b.prirez.dlzka) + ' × ' + fmt(b.prirez.sirka) + ' × ' + fmt(b.hrubka) + ' mm</span>' +
+        (b.oblukova ? '<span class="warnTag">oblúková – CNC len rozvinutá, ohýbaná bočnica</span>' : '') +
+        '<button class="btnS" data-dxf="' + b.id + '">DXF</button></header>' + D.toSVG(d.items, bb, { pad: ts * 2 }) + '</div>';
+    }
+    list.innerHTML = h;
+    list.querySelectorAll('[data-dxf]').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = btn.dataset.dxf;
+      download(E.dxfBocnice(res, id || null), slug() + '-bocnice' + (id ? '-' + id : '') + '.dxf', 'application/dxf');
+    }));
+    list.querySelectorAll('.bocCard header').forEach(hd => hd.addEventListener('click', () => {
+      const k = hd.parentNode.dataset.k;
+      bocSel = bocSel === k ? null : k;
+      renderView();
+      const st = $('#bocList .bocSide .f-bocSel');
+      if (st) st.closest('.bocSide').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }));
+    bindBocEditor(list);
+  }
+
+  // ---------------------------------------------------------------- editor bočníc na výkrese (polia s vynášacími čiarami)
+  let bocSel = null; // kľúč vybraného dielca – polia menia len jeho úpravy; inak globálne hodnoty
+  // f = pole úpravy dielca, g = globálny parameter, a = kotva vo výkrese
+  const BOC_ED = [
+    { f: 'nad', g: 'bocNad', a: 'nad', label: 'Nad hranami', band: 'top' },
+    { f: 'predK', a: 'predK', label: 'Predĺženie konca', band: 'top', piece: true },
+    { g: 'bocZaoblenie', a: 'zaoblenie', label: 'Zaoblenie', band: 'top', smooth: true },
+    { f: 'predZ', a: 'predZ', label: 'Predĺženie začiatku', band: 'bot', piece: true },
+    { f: 'sirka', g: 'sirkaSchodnice', a: 'sirka', label: 'Šírka bočnice', band: 'bot' },
+    { f: 'pod', g: 'bocPod', a: 'pod', label: 'Pod stupňami', band: 'bot' }
+  ];
+  const sideOfKey = k => k && (k[0] === 'u' ? 'vonkajsia' : 'vnutorna');
+  function bocSides() {
+    return [['vonkajsia', input.typ === 'tocite' ? 'Vonkajšia bočnica' : 'Bočnica pri stene'], ['vnutorna', 'Vnútorná bočnica']]
+      .filter(([k]) => res.unfold && res.unfold[k] && res.unfold[k].tvary.length && (k !== 'vnutorna' || input.typ !== 'tocite'));
+  }
+  function bocEditorHTML() {
+    const piece = bocSel && res.bocnice.find(b => b.key === bocSel);
+    let h = '<div class="bocEd"><div class="bocEdBar">' + (piece
+      ? '<span>Upravujete <b>' + piece.id + ' · ' + esc(piece.nazov) + '</b> – polia na výkrese menia len tento dielec.</span>' +
+        (piece.upravena ? '<button class="btnS" data-bocreset="1">Zrušiť úpravy dielca</button>' : '') + '<button class="btnS" data-bocdone="1">Hotovo</button>'
+      : '<span>Hodnoty na výkrese platia pre všetky bočnice. <b>Kliknite na dielec</b> a upravte len ten.</span>' +
+        (input.bocUpravy ? '<button class="btnS" data-bocreset="all">Zrušiť úpravy dielcov</button>' : '')) + '</div>';
+    for (const [k, title] of bocSides())
+      h += '<div class="bocSide" data-side="' + k + '"><div class="bocSideH">' + title + ' – rozvinutie</div><div class="bocStage"></div></div>';
+    return h + '</div>';
+  }
+  function bocVal(e, band) {
+    if (bocSel && e.f) {
+      const o = (input.bocUpravy || {})[bocSel] || {};
+      if (o[e.f] != null) return o[e.f];
+      return band[e.f] != null ? band[e.f] : 0;
+    }
+    return input[e.g];
+  }
+  function setBocVal(e, n) {
+    if (bocSel && e.f) {
+      const all = Object.assign({}, input.bocUpravy || {});
+      all[bocSel] = Object.assign({}, all[bocSel] || {}, { [e.f]: n });
+      input.bocUpravy = all;
+    } else input[e.g] = n;
+    changed(true);
+  }
+  function bindBocEditor(root) {
+    const bar = root.querySelector('.bocEdBar');
+    if (!bar) return;
+    const rs = bar.querySelector('[data-bocreset]');
+    if (rs) rs.addEventListener('click', () => {
+      if (rs.dataset.bocreset === 'all') delete input.bocUpravy;
+      else if (input.bocUpravy) { delete input.bocUpravy[bocSel]; if (!Object.keys(input.bocUpravy).length) delete input.bocUpravy; }
+      changed(true);
+    });
+    const dn = bar.querySelector('[data-bocdone]');
+    if (dn) dn.addEventListener('click', () => { bocSel = null; renderView(); });
+    root.querySelectorAll('.bocSide').forEach(sd => {
+      const key = sd.dataset.side, stage = sd.querySelector('.bocStage');
+      const sel = bocSel && sideOfKey(bocSel) === key ? bocSel : null;
+      const dr = D.bocStrana(res, key, { sel });
+      if (!dr) return;
+      stage.innerHTML = D.toSVG(dr.items, dr.bbox, { pad: dr.ts * 2 }) + '<svg class="bocLead"></svg>';
+      const svg = stage.querySelector('svg.vykres');
+      svg.addEventListener('click', ev => {
+        const p = ev.target.closest && ev.target.closest('[data-k]');
+        const k = p ? p.dataset.k : null;
+        if (!k && !bocSel) return;
+        bocSel = k && k !== bocSel ? k : null;
+        renderView();
+      });
+      // pri vybranom dielci majú polia len jeho strana; globálne polia bez výberu
+      const show = bocSel && !sel ? [] : BOC_ED.filter(e => (sel ? e.f : !e.piece) && (!e.smooth || input.bocTvar !== 'rovna'));
+      const els = show.map(e => {
+        const an = dr.anchors[e.a];
+        if (!an) return null;
+        const d = document.createElement('label');
+        d.className = 'bocFld';
+        const v = bocVal(e, dr.band);
+        const own = sel && e.f && ((input.bocUpravy || {})[sel] || {})[e.f] != null;
+        d.innerHTML = '<span>' + e.label + '</span><input inputmode="decimal" autocomplete="off" value="' + String(Math.round(v * 10) / 10).replace('.', ',') + '"' + (own ? ' class="own"' : '') + '><i>mm</i>';
+        const inp = d.querySelector('input');
+        const commit = () => {
+          const n = parseNum(inp.value);
+          if (n === null || n < 0) { inp.classList.add('bad'); return; }
+          if (Math.abs(n - v) > 1e-9) setBocVal(e, n);
+        };
+        inp.addEventListener('change', commit);
+        inp.addEventListener('keydown', ev => {
+          if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
+          if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown') {
+            ev.preventDefault();
+            const st = (e.g === 'bocZaoblenie' ? 50 : 5) * (ev.shiftKey ? 10 : 1);
+            inp.value = String(Math.max(0, (parseNum(inp.value) || 0) + (ev.key === 'ArrowUp' ? st : -st))).replace('.', ',');
+            commit();
+          }
+        });
+        stage.appendChild(d);
+        return { e, an, d };
+      }).filter(Boolean);
+      const layout = () => {
+        const ctm = svg.getScreenCTM(), r = stage.getBoundingClientRect();
+        if (!ctm || !r.width) return;
+        const px = q => ({ x: ctm.a * q.x - ctm.c * q.y + ctm.e - r.left, y: ctm.b * q.x - ctm.d * q.y + ctm.f - r.top });
+        const W = r.width, Hs = r.height;
+        let lead = '';
+        for (const bandName of ['top', 'bot']) {
+          const row = els.filter(o => o.e.band === bandName).map(o => {
+            const a = px(o.an.a), b = o.an.b ? px(o.an.b) : a;
+            return Object.assign(o, { a, b, m: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, w: o.d.offsetWidth });
+          }).sort((p, q) => p.m.x - q.m.x);
+          let xr = 4;
+          for (const o of row) { o.x = Math.max(xr, Math.min(W - o.w - 4, o.m.x - o.w / 2)); xr = o.x + o.w + 8; }
+          for (let i = row.length - 1, xl = W - 4; i >= 0; i--) { const o = row[i]; if (o.x + o.w > xl) o.x = xl - o.w; xl = o.x - 8; }
+          for (const o of row) {
+            const y = bandName === 'top' ? 6 : Hs - o.d.offsetHeight - 6;
+            o.d.style.left = o.x + 'px';
+            o.d.style.top = y + 'px';
+            const ly = bandName === 'top' ? y + o.d.offsetHeight : y, lx = o.x + o.w / 2;
+            lead += '<path d="M' + lx + ' ' + ly + 'L' + o.m.x + ' ' + o.m.y + '" class="ld"/>';
+            if (o.an.b && Math.hypot(o.a.x - o.b.x, o.a.y - o.b.y) > 2) {
+              lead += '<path d="M' + o.a.x + ' ' + o.a.y + 'L' + o.b.x + ' ' + o.b.y + '" class="dm"/>';
+              for (const q of [o.a, o.b]) lead += '<path d="M' + (q.x - 6) + ' ' + q.y + 'L' + (q.x + 6) + ' ' + q.y + '" class="dm"/>';
+            } else lead += '<circle cx="' + o.m.x + '" cy="' + o.m.y + '" r="3.5" class="dt"/>';
+          }
+        }
+        const ls = stage.querySelector('svg.bocLead');
+        ls.setAttribute('viewBox', '0 0 ' + W + ' ' + Hs);
+        ls.innerHTML = lead;
+      };
+      layout();
+      if (window.ResizeObserver) new ResizeObserver(layout).observe(stage);
     });
   }
 

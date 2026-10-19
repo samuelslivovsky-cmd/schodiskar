@@ -111,6 +111,16 @@ details.grp[open] summary { margin-bottom: 10px; }
 .msg { border-radius: 6px; padding: 8px 12px; font-size: 13px; border-left: 4px solid; }
 .msg.err { background: var(--err-bg); border-color: var(--err); color: #7f1d1d; }
 .msg.warn { background: var(--warn-bg); border-color: var(--warn); color: #78350f; }
+.msg.err { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.msg.err > span { flex: 1 1 320px; }
+.msgBtn { border: 1px solid #fca5a5; background: #fff; color: #7f1d1d; border-radius: 5px; padding: 3px 9px; font: 600 12px var(--sans); cursor: pointer; }
+.msgBtn:hover { border-color: var(--err); }
+.msgBtn.fix { background: var(--err); border-color: var(--err); color: #fff; }
+.msgBtn.fix:hover { filter: brightness(1.1); }
+.fld.errFld label { color: var(--err); }
+.fld.errFld .inp input, .fld.errFld select { border-color: var(--err); background: var(--err-bg); }
+.fld.blink { animation: fldBlink 1.2s ease 2; border-radius: 6px; }
+@keyframes fldBlink { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 40% { box-shadow: 0 0 0 4px #fca5a5; } }
 
 /* záložky */
 .tabs { display: flex; gap: 2px; padding: 10px 16px 0; border-bottom: 1px solid var(--line-2); overflow-x: auto; }
@@ -172,9 +182,20 @@ svg.vykres .hov { stroke: none; cursor: crosshair; }
 svg.vykres .hov:hover, svg.vykres .hov.hl { fill: var(--sel); }
 svg.vykres text { font-family: "DejaVu Sans", "Segoe UI", Arial, sans-serif; fill: #1d2733; pointer-events: none; }
 svg.vykres .T-KOTY { fill: #2f7d4f; }
+svg.vykres .T-CAPY { fill: #0e7490; }
 svg.vykres .L-STROP { stroke: #7c3aed; }
 svg.vykres .T-STROP { fill: #7c3aed; }
 svg.vykres .L-RAMENA { stroke: #dc2626; }
+svg.vykres .L-PRIREZ { stroke: #94a3b8; }
+svg.vykres .f-priRez { fill: #f8fafc; }
+svg.vykres .L-REZ_OBRYS { stroke: #1d2733; }
+svg.vykres .f-bocnica { fill: #efe2cf; }
+svg.vykres [class*="L-DRAZKA"] { stroke: #0e7490; }
+svg.vykres .f-drazka { fill: #a5d8e6; }
+svg.vykres .f-drazkaP { fill: #cbe9f0; }
+svg.vykres .L-CAPY { stroke: #0e7490; }
+svg.vykres .f-cap { fill: #7dc4d8; }
+svg.vykres .T-POPIS { fill: #155e75; }
 svg.vykres .T-RAMENA { fill: #dc2626; }
 svg.vykres .b { font-weight: 700; }
 
@@ -283,6 +304,24 @@ svg.board .pc { fill: #f4e9d6; stroke: #8a5a2b; stroke-width: 1px; vector-effect
 svg.board .pc:hover { fill: var(--sel); }
 svg.board text { fill: #3b2a18; font-family: var(--sans); font-weight: 600; pointer-events: none; }
 
+/* bočnice – CNC editor */
+.boc { display: grid; grid-template-columns: 290px 1fr; min-height: 100%; }
+.bocForm { padding: 14px 16px; border-right: 1px solid var(--line); background: var(--panel); display: grid; gap: 8px; align-content: start; }
+.bocForm h3 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); }
+.bocForm select { width: 100%; font: 500 13.5px var(--sans); padding: 5px 8px; border: 1px solid var(--line-2); border-radius: 6px; background: #fff; }
+.bocList { padding: 14px 16px; display: grid; gap: 14px; align-content: start; }
+.bocList .parts { padding: 0; }
+.bocHead { display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: 13px; }
+.bocCard { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fff; }
+.bocCard header { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; font-size: 13px; margin-bottom: 6px; }
+.bocCard header span { color: var(--ink-2); }
+.bocCard header .btnS { margin-left: auto; }
+.bocCard svg.vykres { width: 100%; height: auto; max-height: 340px; display: block; }
+.warnTag { color: #92400e !important; background: var(--warn-bg); border-radius: 5px; padding: 1px 7px; font-size: 12px; }
+.btnS { border: 1px solid var(--line-2); background: #fff; border-radius: 7px; padding: 5px 12px; font: 600 12.5px var(--sans); cursor: pointer; color: var(--ink); white-space: nowrap; }
+.btnS:hover { border-color: var(--accent); }
+@media (max-width: 900px) { .boc { grid-template-columns: 1fr; } .bocForm { border-right: 0; border-bottom: 1px solid var(--line); } }
+
 /* šípky pri číselných poliach */
 .inp.sp input { padding-right: 50px; }
 .inp.sp .u { right: 28px; }
@@ -312,6 +351,28 @@ svg.board text { fill: #3b2a18; font-family: var(--sans); font-weight: 600; poin
 .tour-pop .tour-next:hover { background: #fbbf24; }
 .tour-pop .tour-skip { border: 0; padding: 6px 4px; color: var(--muted); font-weight: 500; }
 @media (prefers-reduced-motion: reduce) { .tour-hole { transition: none; } .tour.interactive .tour-hole { animation: none; } }
+
+/* editor bočníc na výkrese (polia s vynášacími čiarami) */
+.bocEd { display: grid; gap: 10px; }
+.bocEdBar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; padding: 8px 12px; background: #f1f5fb; border: 1px solid #d6e0ef; border-radius: 8px; }
+.bocEdBar span { margin-right: auto; }
+.bocSide { border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden; }
+.bocSideH { font: 600 12px var(--sans); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); padding: 8px 12px 0; }
+.bocStage { position: relative; padding: 50px 8px; }
+.bocStage svg.vykres { width: 100%; height: auto; max-height: 380px; display: block; }
+.bocStage .pk { cursor: pointer; }
+.bocStage .pk:hover { fill: #d9c3a5; }
+.bocStage svg.bocLead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.bocLead .ld { stroke: #64748b; stroke-width: 1; fill: none; }
+.bocLead .dm { stroke: #2563eb; stroke-width: 1.4; fill: none; }
+.bocLead .dt { fill: #2563eb; }
+.bocFld { position: absolute; display: flex; align-items: center; gap: 4px; background: #fff; border: 1px solid #c7d2e3; border-radius: 6px; padding: 2px 4px 2px 7px; font-size: 11.5px; color: var(--ink-2); white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,.06); z-index: 1; }
+.bocFld input { width: 54px; font: 600 12.5px var(--mono); border: 1px solid var(--line-2); border-radius: 4px; padding: 2px 4px; text-align: right; }
+.bocFld input.own { border-color: #2563eb; background: #eef4ff; }
+.bocFld input.bad { border-color: var(--err); background: var(--err-bg); }
+.bocFld i { font-style: normal; color: var(--muted); }
+.bocCard header { cursor: pointer; }
+.bocCard.on { border-color: #2563eb; box-shadow: 0 0 0 2px #bcd3f5; }
 
 </style>
 </head>
@@ -375,6 +436,7 @@ svg.board text { fill: #3b2a18; font-family: var(--sans); font-weight: 600; poin
       <button role="tab" data-tab="unfold">Rozvinutie</button>
       <button role="tab" data-tab="parts">Dielce</button>
       <button role="tab" data-tab="bom">Rozpis materiálu</button>
+      <button role="tab" data-tab="boc">Bočnice (CNC)</button>
       <button role="tab" data-tab="checks">Kontroly</button>
     </div>
     <div class="view" id="view"></div>
@@ -4962,6 +5024,12 @@ void main() {
     podlahaDole: 0, podlahaHore: 0,
     strop: 250, otvor: 0,
     vyskaZabradlia: 900,
+    // bočnice pre CNC a spoj stupeň – bočnica
+    // bocTvar: 'plynula' = súvislá bočnica s oblým napojením (horná hrana sleduje hrany stupňov), 'rovna' = rovné dosky
+    // wBoc: 'ano' = šírka ramena W (a vonkajší polomer) sa meria vrátane bočníc, stupne sú užšie o ich hrúbku
+    wBoc: 'ano',
+    bocNad: 50, bocPod: 30, bocTvar: 'plynula', bocZaoblenie: 400, bocOkraj: 20,
+    spoj: 'cap', capHrubka: 20, drazkaHlbka: 15, capOdsadenie: 20, capOdsadenieZad: 20, vola: 0.5, freza: 8, drazkaPodst: 'ano',
     doskaDlzka: 3000, doskaSirka: 1200, rez: 4,
     lim: { hMin: 150, hMax: 200, bMin: 220, kMin: 600, kMax: 650, kCiel: 630, klinMin: 100, klinVzd: 150, podchod: 2100 }
   };
@@ -4993,8 +5061,22 @@ void main() {
     }
     if (!TYPY[P.typ]) P.typ = DEFAULTS.typ;
     if (P.smer !== 'vpravo') P.smer = 'vlavo';
+    if (['cap', 'plna', 'ziadna'].indexOf(P.spoj) < 0) P.spoj = DEFAULTS.spoj;
+    if (P.drazkaPodst !== 'nie') P.drazkaPodst = 'ano';
+    if (P.bocTvar !== 'rovna') P.bocTvar = 'plynula';
+    if (P.wBoc !== 'nie') P.wBoc = 'ano';
     P.N = Math.max(0, Math.round(P.N));
     P.nb = Math.max(0, Math.round(P.nb));
+    // úpravy rozmerov jednotlivých bočníc: { 'strana:skupina:úsek': { sirka, nad, pod, predZ, predK } }
+    if (inp.bocUpravy && typeof inp.bocUpravy === 'object') {
+      const bu = {};
+      for (const k of Object.keys(inp.bocUpravy)) {
+        const o = inp.bocUpravy[k] || {}, r = {};
+        for (const f of ['sirka', 'nad', 'pod', 'predZ', 'predK']) { const x = num(o[f], NaN); if (isFinite(x)) r[f] = x; }
+        if (Object.keys(r).length) bu[k] = r;
+      }
+      if (Object.keys(bu).length) P.bocUpravy = bu;
+    }
     // ručné úpravy výstupných hrán: { N, typ, hrany: { index hrany: { ds, dt } } }
     // ds = posun na výstupnej čiare, dt = dodatočný posun pri vnútornej hrane (mm)
     const up = inp.upravy;
@@ -5029,7 +5111,11 @@ void main() {
       if (P.uhol <= 0) err('Celkové otočenie musí byť kladné.');
       if (P.uhol > 1080) err('Celkové otočenie je príliš veľké (max. 1080°).');
     } else if (W <= 0) err('Šírka ramena musí byť kladná.');
-    g.W = W;
+    // hrúbka bočníc v šírke ramena: stupne idú medzi lícami bočníc, steny ostávajú na mieste
+    const tb = P.wBoc === 'ano' ? Math.max(0, P.hrubkaSchodnice) : 0;
+    g.tb = tb;
+    if (!res.errors.length && tb > 0 && (T === 'tocite' ? W - tb : W - 2 * tb) <= 50) err('Šírka ramena je príliš malá pre bočnice hrúbky ' + fmt(tb) + ' mm.');
+    g.W = T === 'tocite' ? W - tb : W - 2 * tb;
     let r = Math.max(0, P.r);
     if (T === 'rovne') {
       if (P.L <= 0) err('Dĺžka schodov musí byť kladná.');
@@ -5060,10 +5146,15 @@ void main() {
     g.r = r;
     if (res.errors.length) return g;
 
-    const M = T === 'U3' ? Math.max(0, P.S - 2 * W) : Math.max(0, P.M);
+    // We = poloha líca vnútornej bočnice od steny, M = zrkadlo medzi lícami vnútorných bočníc
+    const M0 = T === 'U3' ? Math.max(0, P.S - 2 * W) : Math.max(0, P.M), M = M0 + 2 * tb;
+    const W0 = W;
+    W = W - tb;
+    const Wall = ps => tb > 0 ? { real: makePath(ps(0)), face: makePath(ps(tb)) } : { real: makePath(ps(0)), face: makePath(ps(0)) };
+    let wl = null;
     if (T === 'rovne') {
       g.offset = d => makePath([Line(v(0, W - d), v(P.L, W - d))]);
-      g.wall = makePath([Line(v(0, 0), v(P.L, 0))]);
+      wl = Wall(t => [Line(v(0, t), v(P.L, t))]);
       g.outer = [v(0, 0), v(P.L, 0)];
     } else if (T === 'L' || T === 'Lp') {
       const A = P.A, B = P.B, cx = A - W - r, C = v(cx, W + r);
@@ -5072,7 +5163,7 @@ void main() {
         Arc(C, r + d, -Math.PI / 2, Math.PI / 2),
         Line(v(A - W + d, W + r), v(A - W + d, B), v(0, 1))
       ]);
-      g.wall = makePath([Line(v(0, 0), v(A, 0)), Line(v(A, 0), v(A, B))]);
+      wl = Wall(t => [Line(v(0, t), v(A - t, t)), Line(v(A - t, t), v(A - t, B))]);
       g.flightLen = [cx, B - W - r];
     } else if (T === 'U' || T === 'Up' || T === 'U3') {
       const L1 = P.R1, L2 = P.R2, cx = L1 - W - r;
@@ -5084,13 +5175,16 @@ void main() {
         Arc(C2, r + d, 0, Math.PI / 2),
         Line(v(cx, W + M + d), v(L1 - L2, W + M + d), v(-1, 0))
       ]);
-      g.wall = makePath([Line(v(0, 0), v(L1, 0)), Line(v(L1, 0), v(L1, 2 * W + M)), Line(v(L1, 2 * W + M), v(L1 - L2, 2 * W + M))]);
+      const F = 2 * W0 + M0; // vzdialenosť protiľahlých stien
+      wl = Wall(t => [Line(v(0, t), v(L1 - t, t)), Line(v(L1 - t, t), v(L1 - t, F - t)), Line(v(L1 - t, F - t), v(L1 - L2, F - t))]);
       g.flightLen = [cx, L2 - W - r];
     } else if (T === 'tocite') {
       const th = P.uhol * DEG;
       g.offset = d => makePath([Arc(v(0, 0), P.Rs + d, -Math.PI / 2, th)]);
-      g.wall = makePath([Arc(v(0, 0), P.Rv, -Math.PI / 2, th)]);
+      wl = Wall(t => [Arc(v(0, 0), P.Rv - t, -Math.PI / 2, th)]);
     }
+    g.wall = wl.face;
+    g.wallReal = wl.real;
     return g;
   }
 
@@ -5151,6 +5245,53 @@ void main() {
       R.K = K; R.L = L; R.n = n;
     }
     return { t: tn, regions, d0: d };
+  }
+
+  // prírez: obdĺžnik natočený podľa nástupnej hrany (z tvaru s čapmi)
+  function setPrirez(tr) {
+    const shape = tr.polyCut || tr.polyOver;
+    const fdir = norm(sub(tr.front[1], tr.front[0]));
+    let ang = -Math.atan2(fdir.y, fdir.x);
+    const pts = sampleVerts(shape, true, 1 * DEG);
+    let rp = pts.map(p => rotate(sub(p, tr.front[0]), ang));
+    let bb = bbox(rp);
+    if (bb.maxY + bb.minY < 0) { ang += Math.PI; rp = pts.map(p => rotate(sub(p, tr.front[0]), ang)); bb = bbox(rp); }
+    tr.prirez = { dlzka: bb.w, sirka: bb.h, uhol: ang, origin: tr.front[0], minX: bb.minX, minY: bb.minY };
+    tr.plochaPrirez = bb.w * bb.h;
+    tr.hrany = edgeLengths(shape); // dĺžky hrán výrezu
+  }
+
+  // rovnobežný posun otvorenej lomenej čiary s oblúkmi (d > 0 vpravo od smeru), rohy s presahom (miter)
+  function offsetVerts(verts, d) {
+    const segs = [];
+    for (let k = 0; k < verts.length - 1; k++) {
+      const a = verts[k], b = verts[k + 1], ch = sub(b, a), L = len(ch);
+      if (L < 1e-9) continue;
+      const th = 4 * Math.atan(a.b || 0);
+      const t0 = rotate(norm(ch), th / 2), t1 = rotate(norm(ch), -th / 2);
+      const n0 = v(t0.y, -t0.x), n1 = v(t1.y, -t1.x);
+      segs.push({ p0: add(a, mul(n0, d)), p1: add(b, mul(n1, d)), b: a.b || 0, t0, t1 });
+    }
+    if (!segs.length) return null;
+    const out = [bv(segs[0].p0, segs[0].b)];
+    for (let k = 0; k < segs.length; k++) {
+      const sg = segs[k], nx = segs[k + 1];
+      let end = sg.p1;
+      if (nx && dist(sg.p1, nx.p0) > 1e-6) {
+        const den = cross(sg.t1, nx.t0);
+        if (Math.abs(den) > 1e-9) {
+          const lam = cross(sub(nx.p0, sg.p1), nx.t0) / den;
+          end = add(sg.p1, mul(sg.t1, lam));
+          out.push(bv(end, nx.b));
+          continue;
+        }
+        out.push(bv(end, 0));
+        out.push(bv(nx.p0, nx.b));
+        continue;
+      }
+      out.push(bv(end, nx ? nx.b : 0));
+    }
+    return out;
   }
 
   // ---------------------------------------------------------------- hlavný výpočet
@@ -5367,6 +5508,7 @@ void main() {
           const pWa = pw ? pw.pt : viaTangent(wall, e0.Q, e0.u);
           if (pIn && pWa) {
             front = [pIn, pWa];
+            frontT = pi ? pi.s : null; frontU = pw ? pw.s : null;
             polyOver = joinPieces([
               [bv(pIn), bv(pWa)],
               pw ? pathPiece(wall, pw.s, e1.u) : [bv(pWa)].concat(pathPiece(wall, e0.u, e1.u)),
@@ -5389,17 +5531,37 @@ void main() {
           plochaPrirez: 0
         };
         tr.plochaSPresahom = polyArea(polyOver);
-        // prírez: obdĺžnik natočený podľa nástupnej hrany
-        const fdir = norm(sub(front[1], front[0]));
-        let ang = -Math.atan2(fdir.y, fdir.x);
-        const pts = sampleVerts(polyOver, true, 1 * DEG);
-        let rp = pts.map(p => rotate(sub(p, front[0]), ang));
-        let bb = bbox(rp);
-        if (bb.maxY + bb.minY < 0) { ang += Math.PI; rp = pts.map(p => rotate(sub(p, front[0]), ang)); bb = bbox(rp); }
-        tr.prirez = { dlzka: bb.w, sirka: bb.h, uhol: ang, origin: front[0], minX: bb.minX, minY: bb.minY };
-        tr.plochaPrirez = bb.w * bb.h;
-        // dĺžky hrán tvaru s presahom
-        tr.hrany = edgeLengths(polyOver);
+        // čapy do drážok bočníc: výrez stupňa sa na strane bočnice predĺži o hĺbku drážky
+        tr.polyCut = polyOver;
+        tr.cap = { vonku: null, vnutri: null };
+        const dc = P.spoj !== 'ziadna' ? Math.max(0, P.drazkaHlbka) : 0;
+        if (dc > 0) {
+          const ods = Math.max(0, P.capOdsadenie);
+          const aU = frontU != null ? frontU + ods : null, aT = frontT != null && P.typ !== 'tocite' ? frontT + ods : null;
+          // čap odsadený od nástupnej aj od zadnej hrany (zub na oboch koncoch)
+          const odsZ = Math.max(0, P.capOdsadenieZad), bU = e1.u - odsZ, bT = e1.t - odsZ;
+          const tabU = aU != null && bU - aU > 1 ? offsetVerts(pathPiece(wall, aU, bU), dc) : null;
+          const tabT = aT != null && bT - aT > 1 ? offsetVerts(pathPiece(inner, aT, bT), -dc) : null;
+          if (tabU || tabT) {
+            const fu = frontU != null ? frontU : e0.u, ft = frontT != null ? frontT : e0.t;
+            tr.polyCut = joinPieces([
+              [bv(front[0]), bv(front[1])],
+              tabU ? pathPiece(wall, fu, aU).concat(tabU, pathPiece(wall, bU, e1.u)) : (frontU != null ? pathPiece(wall, fu, e1.u) : [bv(front[1])].concat(pathPiece(wall, e0.u, e1.u))),
+              [bv(e1.Q), bv(e1.P)],
+              tabT ? pathPiece(inner, e1.t, bT).concat(reverseOpen(tabT), pathPiece(inner, aT, ft)) : (frontT != null ? pathPiece(inner, e1.t, ft) : pathPiece(inner, e1.t, e0.t).concat([bv(front[0])]))
+            ], true);
+            if (tabU) tr.cap.vonku = [aU, bU];
+            if (tabT) tr.cap.vnutri = [aT, bT];
+            // plochy čapov (pás medzi hranou stupňa a čapom) – na zvýraznenie a kótovanie vo výkrese
+            // dĺžka = po hrane stupňa, hĺbka = výstupok do drážky, hrúbka = zostatok po frézovaní z oboch strán
+            const capHr = P.spoj === 'cap' ? Math.min(Math.max(1, P.capHrubka), P.hrubka) : P.hrubka;
+            tr.caps = [];
+            if (tabU) tr.caps.push({ strana: 'vonku', poly: joinPieces([pathPiece(wall, aU, bU), reverseOpen(tabU)], true), dlzka: bU - aU, hlbka: dc, hrubka: capHr });
+            if (tabT) tr.caps.push({ strana: 'vnutri', poly: joinPieces([pathPiece(inner, aT, bT), reverseOpen(tabT)], true), dlzka: bT - aT, hlbka: dc, hrubka: capHr });
+          }
+        }
+        tr.fr = { vonku: frontU != null ? frontU : e0.u, vnutri: frontT != null ? frontT : e0.t };
+        setPrirez(tr);
         treads.push(tr);
       }
     }
@@ -5409,9 +5571,16 @@ void main() {
     // prvá od hrubej podlahy dole, posledná po hrubú podlahu hore
     const dole = Math.max(0, P.podlahaDole), hore = Math.max(0, P.podlahaHore);
     res.podlaha = { dole, hore, hruba: H + dole - hore };
-    if (hore >= h) res.warnings.push('Nášľapná vrstva hore je hrubšia ako výška stupňa.');
+    // hrubšia vrstva než výška stupňa je takmer isto preklep (napr. 1300 namiesto 130) – bočnica by išla pod podlahu
+    if (dole >= h) res.errors.push('Nášľapná vrstva dole (' + fmt(dole) + ' mm) je hrubšia ako výška stupňa (' + fmt(h, 1) + ' mm). Skontrolujte zadanie.');
+    if (hore >= h) res.errors.push('Nášľapná vrstva hore (' + fmt(hore) + ' mm) je hrubšia ako výška stupňa (' + fmt(h, 1) + ' mm). Skontrolujte zadanie.');
+    // drážka podstupnice v bočnici: šikmý prienik → predĺženie o hĺbku / sin(uhla)
+    const sinAt = (path, e, s) => { const tg = pathTangent(path, s), d = norm(sub(e.Q, e.P)); return Math.max(0.25, Math.abs(cross(tg, d))); };
+    const dPod = P.drazkaPodst === 'ano' ? Math.max(0, P.drazkaHlbka) : 0;
     res.risers = edges.map(e => ({
-      n: e.i + 1, P: e.P, Q: e.Q, dlzka: dist(e.P, e.Q),
+      n: e.i + 1, P: e.P, Q: e.Q,
+      dlzka: dist(e.P, e.Q) + (dPod ? dPod / sinAt(wall, e, e.u) + (P.typ !== 'tocite' ? dPod / sinAt(inner, e, e.t) : 0) : 0),
+      sinU: sinAt(wall, e, e.u), sinT: P.typ !== 'tocite' ? sinAt(inner, e, e.t) : 1,
       vyska: Math.max(0, e.i === N - 1 ? h - hore : h - P.hrubka + (e.i === 0 ? dole : 0))
     }));
 
@@ -5423,6 +5592,8 @@ void main() {
       inner: pathPiece(inner, 0, inner.len),
       walk: pathPiece(walk, 0, walk.len),
       wall: pathPiece(wall, 0, wall.len),
+      wallReal: pathPiece(g.wallReal, 0, g.wallReal.len),
+      bocHrubka: g.tb,
       ctrl: ctrl ? pathPiece(ctrl, 0, ctrl.len) : null,
       start: [inner.start, wall.start],
       end: [inner.end, wall.end],
@@ -5441,6 +5612,7 @@ void main() {
 
     // ---- rozvinutie schodníc
     if (!res.errors.length) res.unfold = unfold(P, res, inner, wall, edges, kinds, N, h, H);
+    if (res.unfold) res.bocnice = stringerPieces(P, res, inner, wall, N, h, H);
 
     // ---- kontroly
     checks(P, res, winder);
@@ -5473,46 +5645,229 @@ void main() {
   }
 
   // orientačný tvar schodnice
-  function stringerShapes(pos, kinds, N, h, H, Ws, e, dole) {
+  // ---------------------------------------------------------------- bočnice: drážky, hladký obrys, dielce pre CNC
+  // drážky v súradniciach rozvinutia (x po hrane bočnice, y výška)
+  function sideGrooves(P, res, side, pos, N, h, H) {
+    const out = [];
+    const t = P.hrubka, dc = Math.max(0, P.drazkaHlbka), vola = Math.max(0, P.vola);
+    const capH = P.spoj === 'cap' ? Math.min(Math.max(1, P.capHrubka), t) : t;
+    const dole = res.podlaha ? res.podlaha.dole : 0, hore = res.podlaha ? res.podlaha.hore : 0;
+    const capKey = side === 'u' ? 'vonku' : 'vnutri', sinKey = side === 'u' ? 'sinU' : 'sinT';
+    if (P.spoj !== 'ziadna' && dc > 0) for (const tr of res.treads) {
+      const c = tr.cap && tr.cap[capKey];
+      if (!c) continue;
+      const sh = (t - capH) / 2;
+      out.push({ typ: 'stupen', n: tr.n, x0: c[0] - vola / 2, x1: c[1] + vola / 2, y0: tr.vyska - t + sh - vola / 2, y1: tr.vyska - sh + vola / 2 });
+    }
+    if (P.drazkaPodst === 'ano' && dc > 0) res.risers.forEach((r, i) => {
+      const w = P.hrubkaPodst / (r[sinKey] || 1);
+      const y0 = i === 0 ? -dole : i * h, y1 = i === N - 1 ? H - hore : (i + 1) * h - t;
+      if (y1 - y0 > 5) out.push({ typ: 'podstupnica', n: r.n, x0: pos[i] - vola / 2, x1: pos[i] + w + vola / 2, y0, y1 });
+    });
+    return out;
+  }
+
+  // horná / dolná konvexná obálka bodov (zľava doprava)
+  function hull(pts, upper) {
+    const q = pts.slice().sort((a, b) => a.x - b.x || a.y - b.y), H = [];
+    for (const p of q) {
+      while (H.length >= 2) {
+        const o = H[H.length - 2], a = H[H.length - 1], c = cross(sub(a, o), sub(p, a));
+        if (upper ? c >= -1e-9 : c <= 1e-9) H.pop(); else break;
+      }
+      if (H.length && Math.abs(H[H.length - 1].x - p.x) < 1e-6) { if (upper ? p.y > H[H.length - 1].y : p.y < H[H.length - 1].y) H[H.length - 1] = p; continue; }
+      H.push(p);
+    }
+    return H;
+  }
+  // hodnota lomenej čiary v x (mimo rozsahu predĺžená krajným úsekom)
+  function polyAt(pl, x) {
+    if (pl.length === 1) return pl[0].y;
+    let i = 0;
+    while (i < pl.length - 2 && x > pl[i + 1].x) i++;
+    const a = pl[i], b = pl[i + 1];
+    return a.y + (b.y - a.y) * (x - a.x) / ((b.x - a.x) || 1);
+  }
+
+  // obrys bočnice: na každom rovnom úseku priama/konvexná horná hrana nad hranami stupňov (aj s presahom)
+  // a dolná hrana v šírke bočnice, vždy pod drážkami a spodkami stupňov; po úsekoch = samostatné dosky
+  function stringerBands(P, res, path, side, pos, kinds, N, h, H, grooves) {
     const groups = [];
     let cur = null;
     for (let j = 1; j < N; j++) {
       if (kinds[j] === 'podesta') { cur = null; continue; }
       if (!cur) { cur = { a: j, e: j }; groups.push(cur); } else cur.e = j;
     }
-    const shapes = [];
+    const segs = path.prims.map((q, i) => ({ x0: q.s0, x1: q.s0 + q.len, arc: q.t === 'A', i })).filter(q => q.x1 - q.x0 > 1);
+    const Ws0 = Math.max(50, P.sirkaSchodnice), e0 = Math.max(0, P.bocNad);
+    const dole = res.podlaha ? res.podlaha.dole : 0;
+    const frKey = side === 'u' ? 'vonku' : 'vnutri';
+    const fronts = [null].concat(res.treads.map(tr => tr.fr ? tr.fr[frKey] : null));
+    // spodky stupňov a drážky – dolná hrana musí ísť pod nimi
+    const under = grooves.map(g => ({ x0: g.x0, x1: g.x1, y: g.y0 }));
+    for (const tr of res.treads) {
+      const a = fronts[tr.n] != null ? Math.min(fronts[tr.n], pos[tr.n - 1]) : pos[tr.n - 1];
+      under.push({ x0: a, x1: pos[tr.n], y: tr.vyska - P.hrubka });
+    }
+    const up = P.bocUpravy || {};
+    const pod0 = Math.max(0, P.bocPod);
+    const bands = [];
     for (const gr of groups) {
-      const U = [];
-      for (let k = gr.a; k <= gr.e; k++) U.push(v(pos[k - 1], k * h + e));
-      // koncový nosný bod: podlaha hore alebo predná hrana podesty
-      U.push(v(pos[gr.e], (gr.e + 1) * h + e));
-      const yBase = gr.a === 1 ? -(dole || 0) : (gr.a - 1) * h; // prvé rameno stojí na hrubej podlahe
-      const yTop = (gr.e + 1) * h + e;
+      const yBase = gr.a === 1 ? -dole : (gr.a - 1) * h; // prvé rameno stojí na hrubej podlahe
       const xEnd = pos[gr.e];
-      if (U.length < 2) continue;
-      // dolná hrana: zvislý posun o Ws / cos(sklon)
-      const slope = k => {
-        const a = U[Math.max(0, k - 1)], b = U[Math.min(U.length - 1, k + 1)];
-        let ang = Math.atan2(b.y - a.y, Math.max(1e-6, b.x - a.x));
-        return Math.min(ang, 70 * DEG);
-      };
-      const D = U.map((p, k) => v(p.x, p.y - Ws / Math.cos(slope(k))));
-      // predĺženie koncov
-      const ext = (arr, k0, k1, L) => { const d = norm(sub(arr[k1], arr[k0])); return add(arr[k1], mul(d, L)); };
-      const big = 3 * Ws + 2 * h;
-      const Ue = [ext(U, 1, 0, big)].concat(U, [ext(U, U.length - 2, U.length - 1, big)]);
-      const De = [ext(D, 1, 0, big)].concat(D, [ext(D, D.length - 2, D.length - 1, big)]);
-      let poly = Ue.concat(De.slice().reverse());
-      poly = clipHalf(poly, v(0, -1), -yBase);       // y >= yBase
-      poly = clipHalf(poly, v(0, 1), yTop);          // y <= yTop
-      poly = clipHalf(poly, v(1, 0), xEnd);          // x <= xEnd
-      // prírez: natočený podľa spojnice prvej a poslednej hrany
-      const dir = norm(sub(U[U.length - 1], U[0]));
+      const gx0 = pos[gr.a - 1] - (3 * Ws0 + 2 * h);
+      // úseky dráhy v tejto skupine s vlastnými rozmermi
+      const wins = [];
+      segs.forEach((sg, si) => {
+        const key = side + ':' + gr.a + ':' + sg.i;
+        const o = up[key] || {};
+        const Ws = o.sirka > 0 ? o.sirka : Ws0, eB = o.nad != null && isFinite(o.nad) ? Math.max(0, o.nad) : e0;
+        const pod = o.pod != null && isFinite(o.pod) ? Math.max(0, o.pod) : pod0;
+        const pZ = Math.max(0, o.predZ || 0), pK = Math.max(0, o.predK || 0);
+        const wx0 = Math.max(sg.x0, gx0) - pZ, wx1 = Math.min(sg.x1, xEnd) + pK;
+        if (wx1 - wx0 < 20) return;
+        wins.push({ sg, si, key, o, Ws, eB, pod, pZ, pK, wx0, wx1 });
+      });
+      if (P.bocTvar === 'plynula') {
+        bands.push(...smoothBands(P, gr, wins, pos, fronts, under, h, yBase, xEnd));
+        continue;
+      }
+      wins.forEach(({ sg, si, key, o, Ws, eB, pod, pZ, pK, wx0, wx1 }) => {
+        // body, nad ktorými musí ísť horná hrana
+        const req = [];
+        for (let k = gr.a; k <= gr.e; k++) {
+          req.push(v(pos[k - 1], k * h + eB));
+          if (fronts[k] != null && fronts[k] < pos[k - 1]) req.push(v(fronts[k], k * h + eB));
+        }
+        req.push(v(pos[gr.e], (gr.e + 1) * h + eB));
+        req.sort((a, b) => a.x - b.x);
+        for (let i = 1; i < req.length; i++) if (req[i].y < req[i - 1].y) req[i] = v(req[i].x, req[i - 1].y);
+        const inside = req.filter(q => q.x > wx0 && q.x < wx1);
+        if (!inside.length && (req[0].x > wx1 || req[req.length - 1].x < wx0)) return; // úsek bez stupňov tejto skupiny
+        const env = req.length > 1 ? req : [req[0], v(req[0].x + 1, req[0].y)];
+        const top = hull(inside.concat([v(wx0, polyAt(env, wx0)), v(wx1, polyAt(env, wx1))]), true);
+        // dolná hrana: vzorky pod hornou hranou v šírke Ws (kolmo), pod drážkami a stupňami, potom dolná obálka
+        const xs = [wx0, wx1];
+        for (let x = wx0; x < wx1; x += 25) xs.push(x);
+        for (const q of top) xs.push(q.x);
+        for (const u of under) { if (u.x0 > wx0 && u.x0 < wx1) xs.push(u.x0); if (u.x1 > wx0 && u.x1 < wx1) xs.push(u.x1); }
+        const bot = xs.map(x => {
+          let i = 0;
+          while (i < top.length - 2 && x > top[i + 1].x) i++;
+          const sl = top.length > 1 ? Math.atan2(top[i + 1].y - top[i].y, (top[i + 1].x - top[i].x) || 1e-9) : 0;
+          let y = polyAt(top, x) - Ws / Math.cos(Math.min(Math.abs(sl), 75 * DEG));
+          for (const u of under) if (x >= u.x0 - 1e-6 && x <= u.x1 + 1e-6) y = Math.min(y, u.y - pod);
+          return v(x, y);
+        });
+        const bottom = hull(bot, false);
+        let poly = top.concat(bottom.slice().reverse());
+        poly = clipHalf(poly, v(0, -1), -yBase);                 // y >= yBase (podlaha / podesta)
+        poly = clipHalf(poly, v(1, 0), xEnd + pK);               // koniec pri hornej podlahe
+        if (poly.length < 3) return;
+        let A = 0;
+        for (let i = 0; i < poly.length; i++) A += cross(poly[i], poly[(i + 1) % poly.length]) / 2;
+        if (Math.abs(A) < 5000) return;
+        const dir = norm(sub(top[top.length - 1], top[0]));
+        const ang = -Math.atan2(dir.y, dir.x);
+        const bb = bbox(poly.map(p => rotate(p, ang)));
+        bands.push({ od: gr.a, po: gr.e, key, seg: si, arc: sg.arc, x0: wx0, x1: wx1, sirka: Ws, nad: eB, pod, predZ: pZ, predK: pK, upravena: !!up[key], poly, prirez: { dlzka: bb.w, sirka: bb.h, sklon: -ang / DEG } });
+      });
+    }
+    return bands;
+  }
+
+  // Douglas–Peucker pre otvorenú lomenú čiaru
+  function simplify(pts, tol) {
+    if (pts.length < 3) return pts.slice();
+    const keep = new Uint8Array(pts.length);
+    keep[0] = keep[pts.length - 1] = 1;
+    const st = [[0, pts.length - 1]];
+    while (st.length) {
+      const [i0, i1] = st.pop();
+      const a = pts[i0], d = sub(pts[i1], a), L = len(d) || 1e-9;
+      let mx = -1, mi = -1;
+      for (let i = i0 + 1; i < i1; i++) {
+        const e = Math.abs(cross(d, sub(pts[i], a))) / L;
+        if (e > mx) { mx = e; mi = i; }
+      }
+      if (mx > tol) { keep[mi] = 1; st.push([i0, mi], [mi, i1]); }
+    }
+    return pts.filter((_, i) => keep[i]);
+  }
+
+  // vyhladenie s obmedzením: opakované priemerovanie, po každom kroku y >= lo (resp. y <= hi)
+  function constrainedSmooth(y, bound, upper, iters) {
+    const n = y.length;
+    if (n < 3) return y;
+    let a = y.slice(), b = new Float64Array(n);
+    for (let k = 0; k < iters; k++) {
+      for (let i = 1; i < n - 1; i++) b[i] = (a[i - 1] + 2 * a[i] + a[i + 1]) / 4;
+      b[0] = 2 * b[1] - b[2]; b[n - 1] = 2 * b[n - 2] - b[n - 3]; // koncové úseky ostávajú priame
+      for (let i = 0; i < n; i++) a[i] = upper ? Math.max(b[i], bound[i]) : Math.min(b[i], bound[i]);
+    }
+    return a;
+  }
+
+  // súvislá bočnica s oblým napojením (ako „Oblé napojení schodnic"):
+  // horná hrana ide v odstupe nad nástupnými hranami, dolná v šírke bočnice a v odstupe pod stupňami a drážkami,
+  // obe vyhladené po celej skupine stupňov; diely sa delia v rohoch dráhy a na seba plynulo nadväzujú
+  function smoothBands(P, gr, wins, pos, fronts, under, h, yBase, xEnd) {
+    // požiadavky na hornú hranu (bez odstupu): nástupné hrany vrátane presahu, schodovito stúpajúce
+    const req = [];
+    for (let k = gr.a; k <= gr.e; k++) {
+      req.push(v(pos[k - 1], k * h));
+      if (fronts[k] != null && fronts[k] < pos[k - 1]) req.push(v(fronts[k], k * h));
+    }
+    req.push(v(pos[gr.e], (gr.e + 1) * h));
+    req.sort((a, b) => a.x - b.x);
+    for (let i = 1; i < req.length; i++) if (req[i].y < req[i - 1].y) req[i] = v(req[i].x, req[i - 1].y);
+    // úseky bez stupňov tejto skupiny vynechať
+    wins = wins.filter(w => req.some(q => q.x > w.wx0 && q.x < w.wx1) || !(req[0].x >= w.wx1 || req[req.length - 1].x <= w.wx0));
+    if (!wins.length) return [];
+    const X0 = Math.min.apply(null, wins.map(w => w.wx0)), X1 = Math.max.apply(null, wins.map(w => w.wx1));
+    const step = 10, n = Math.max(3, Math.ceil((X1 - X0) / step) + 1), dx = (X1 - X0) / (n - 1);
+    const xs = Array.from({ length: n }, (_, i) => X0 + i * dx);
+    const winAt = x => { for (const w of wins) if (x >= w.wx0 - 1e-6 && x <= w.wx1 + 1e-6) return w; return x < wins[0].wx0 ? wins[0] : wins[wins.length - 1]; };
+    const env = req.length > 1 ? req : [req[0], v(req[0].x + 1, req[0].y)];
+    const W = xs.map(winAt);
+    const R = Math.max(0, P.bocZaoblenie);
+    const iters = Math.min(6000, Math.round(0.5 * Math.pow(R / dx, 2)));
+    const topLo = xs.map((x, i) => polyAt(env, x) + W[i].eB);
+    const top = constrainedSmooth(topLo, topLo, true, iters);
+    // dolná hrana: šírka kolmo na sklon a odstup pod spodkami stupňov / drážkami
+    const botHi = xs.map((x, i) => {
+      const j = Math.min(n - 2, Math.max(1, i));
+      const sl = Math.atan2(top[j + 1] - top[j - 1], 2 * dx);
+      let y = top[i] - W[i].Ws / Math.cos(Math.min(Math.abs(sl), 75 * DEG));
+      for (const u of under) if (x >= u.x0 - 1e-6 && x <= u.x1 + 1e-6) y = Math.min(y, u.y - W[i].pod);
+      return y;
+    });
+    // dolná hrana nesmie byť plytšia než v susedstve drážok (krok vzoriek môže drážku obísť)
+    for (const u of under) for (const xq of [u.x0, u.x1]) {
+      const i = Math.round((xq - X0) / dx);
+      if (i >= 0 && i < n) botHi[i] = Math.min(botHi[i], u.y - W[i].pod);
+    }
+    const bot = constrainedSmooth(botHi, botHi, false, iters);
+    const at = (arr, x) => { const t = (x - X0) / dx, i = Math.max(0, Math.min(n - 2, Math.floor(t))); return arr[i] + (arr[i + 1] - arr[i]) * (t - i); };
+    const up = P.bocUpravy || {};
+    const out = [];
+    for (const w of wins) {
+      const xsW = [w.wx0].concat(xs.filter(x => x > w.wx0 + 1e-6 && x < w.wx1 - 1e-6), [w.wx1]);
+      const T = simplify(xsW.map(x => v(x, at(top, x))), 0.2);
+      const B = simplify(xsW.map(x => v(x, at(bot, x))), 0.2);
+      let poly = T.concat(B.slice().reverse());
+      poly = clipHalf(poly, v(0, -1), -yBase);
+      poly = clipHalf(poly, v(1, 0), xEnd + w.pK);
+      if (poly.length < 3) continue;
+      let A = 0;
+      for (let i = 0; i < poly.length; i++) A += cross(poly[i], poly[(i + 1) % poly.length]) / 2;
+      if (Math.abs(A) < 5000) continue;
+      const dir = norm(sub(T[T.length - 1], T[0]));
       const ang = -Math.atan2(dir.y, dir.x);
       const bb = bbox(poly.map(p => rotate(p, ang)));
-      shapes.push({ od: gr.a, po: gr.e, poly, nosing: U, prirez: { dlzka: bb.w, sirka: bb.h, sklon: -ang / DEG } });
+      out.push({ od: gr.a, po: gr.e, key: w.key, seg: w.si, arc: w.sg.arc, x0: w.wx0, x1: w.wx1, sirka: w.Ws, nad: w.eB, pod: w.pod, predZ: w.pZ, predK: w.pK, upravena: !!up[w.key], plynula: true, poly, prirez: { dlzka: bb.w, sirka: bb.h, sklon: -ang / DEG } });
     }
-    return shapes;
+    return out;
   }
 
   function unfold(P, res, inner, wall, edges, kinds, N, h, H) {
@@ -5523,15 +5878,74 @@ void main() {
         prof.push(v(pos[i], (i + 1) * h));
         if (i < N - 1) prof.push(v(pos[i + 1], (i + 1) * h));
       }
+      const drazky = sideGrooves(P, res, key, pos, N, h, H);
       return {
-        dlzka: path.len,
-        pos,
-        rohy: cornerParams(path),
-        profil: prof,
-        tvary: stringerShapes(pos, kinds, N, h, H, P.sirkaSchodnice, 50, Math.max(0, P.podlahaDole))
+        dlzka: path.len, pos, rohy: cornerParams(path), profil: prof, drazky,
+        tvary: stringerBands(P, res, path, key, pos, kinds, N, h, H, drazky)
       };
     };
     return { vnutorna: make(inner, 't'), vonkajsia: make(wall, 'u') };
+  }
+
+  function roundRect(x0, x1, y0, y1, r, roundL, roundR) {
+    r = Math.max(0, Math.min(r, (x1 - x0) / 2, (y1 - y0) / 2));
+    const k = Math.tan(Math.PI / 8), rl = roundL ? r : 0, rr = roundR ? r : 0, out = [];
+    const Pt = (x, y, b) => out.push({ x, y, b: b || 0 });
+    Pt(x0 + rl, y0);
+    if (rr) { Pt(x1 - rr, y0, k); Pt(x1, y0 + rr); Pt(x1, y1 - rr, k); Pt(x1 - rr, y1); }
+    else { Pt(x1, y0); Pt(x1, y1); }
+    if (rl) { Pt(x0 + rl, y1, k); Pt(x0, y1 - rl); Pt(x0, y0 + rl, k); }
+    else { Pt(x0, y1); Pt(x0, y0); }
+    return cleanVerts(out, true);
+  }
+
+  // dielce bočníc pre CNC: z pohľadu na stranu s drážkami, natočené na najmenší prírez s prídavkom
+  function stringerPieces(P, res, inner, wall, N, h, H) {
+    const pieces = [];
+    const rF = Math.max(0, P.freza) / 2, dc = Math.max(0, P.drazkaHlbka);
+    const sides = [{ key: 'vonkajsia', nazov: P.typ === 'tocite' ? 'Vonkajšia bočnica' : 'Bočnica pri stene' }];
+    if (P.typ !== 'tocite') sides.push({ key: 'vnutorna', nazov: 'Vnútorná bočnica' });
+    for (const sd of sides) {
+      const U = res.unfold[sd.key];
+      const mirror = sd.key === 'vonkajsia' ? P.smer === 'vlavo' : P.smer === 'vpravo';
+      for (const band of U.tvary) {
+        const poly = band.poly, pb = bbox(poly);
+        const gs = [];
+        for (const g of U.drazky) {
+          const x0 = Math.max(g.x0, band.x0, pb.minX), x1 = Math.min(g.x1, band.x1, pb.maxX);
+          if (x1 - x0 < 2 || g.y1 < pb.minY || g.y0 > pb.maxY) continue;
+          gs.push({ typ: g.typ, n: g.n, verts: roundRect(x0, x1, g.y0, g.y1, rF, x0 === g.x0, x1 === g.x1), lab: v((x0 + x1) / 2, (g.y0 + g.y1) / 2) });
+        }
+        const mx = q => v(mirror ? -q.x : q.x, q.y);
+        const mv = vs => vs.map(q => ({ x: mirror ? -q.x : q.x, y: q.y, b: mirror ? -q.b : q.b }));
+        const pts = poly.map(mx);
+        let best = null;
+        for (let a = -85; a <= 85; a += 0.5) {
+          const bb = bbox(pts.map(q => rotate(q, a * DEG)));
+          const sc = bb.w * bb.h + (bb.h > bb.w ? 1e12 : 0); // dlhšia strana vodorovne
+          if (!best || sc < best.sc - 1e-6) best = { sc, a: a * DEG, bb };
+        }
+        const o = Math.max(0, P.bocOkraj);
+        const tf = q => { const r = rotate(q, best.a); return v(r.x - best.bb.minX + o, r.y - best.bb.minY + o); };
+        const tfv = vs => vs.map(q => { const r = tf(q); return { x: r.x, y: r.y, b: q.b }; });
+        const stupne = gs.filter(g => g.typ === 'stupen').map(g => g.n);
+        pieces.push({
+          strana: sd.key, nazov: sd.nazov, key: band.key, oblukova: band.arc, zrkadlena: mirror,
+          sirka: band.sirka, nad: band.nad, pod: band.pod, plynula: !!band.plynula, predZ: band.predZ, predK: band.predK, upravena: band.upravena,
+          stupne: stupne.length ? Math.min.apply(null, stupne) + '–' + Math.max.apply(null, stupne) : (band.od + '–' + band.po),
+          obrys: pts.map(q => { const r = tf(q); return { x: r.x, y: r.y, b: 0 }; }),
+          drazky: gs.map(g => ({ typ: g.typ, n: g.n, hlbka: dc, verts: tfv(mv(g.verts)), lab: tf(mx(g.lab)) })),
+          prirez: { dlzka: best.bb.w + 2 * o, sirka: best.bb.h + 2 * o, okraj: o },
+          dlzkaTvaru: best.bb.w, hrubka: P.hrubkaSchodnice
+        });
+      }
+    }
+    for (const key of ['vonkajsia', 'vnutorna']) {
+      const ps = pieces.filter(q => q.strana === key);
+      ps.forEach((q, i) => { q.nazov += ps.length > 1 ? ' ' + (i + 1) : ''; });
+    }
+    pieces.forEach((q, i) => { q.id = 'B' + (i + 1); });
+    return pieces;
   }
 
   // ramená: hranice zákrut (predĺženie vnútornej hrany ramena po stenu) a popisy s číslami stupňov
@@ -5790,21 +6204,15 @@ void main() {
     const mc = vs => vs && reverseClosed(mo(vs));
     for (const e of res.edges) { e.P = mp(e.P); e.Q = mp(e.Q); e.W = mp(e.W); }
     for (const t of res.treads) {
+      const same = t.polyCut === t.polyOver;
       t.poly = mc(t.poly); t.polyOver = mc(t.polyOver);
+      t.polyCut = same ? t.polyOver : mc(t.polyCut);
       t.front = t.front.map(mp);
-      // prírez: znovu určiť natočenie
-      const fdir = norm(sub(t.front[1], t.front[0]));
-      let ang = -Math.atan2(fdir.y, fdir.x);
-      const pts = sampleVerts(t.polyOver, true, DEG);
-      let rp = pts.map(p => rotate(sub(p, t.front[0]), ang));
-      let bb = bbox(rp);
-      if (bb.maxY + bb.minY < 0) { ang += Math.PI; rp = pts.map(p => rotate(sub(p, t.front[0]), ang)); bb = bbox(rp); }
-      t.prirez = { dlzka: bb.w, sirka: bb.h, uhol: ang, origin: t.front[0], minX: bb.minX, minY: bb.minY };
-      t.hrany = edgeLengths(t.polyOver);
+      setPrirez(t); // prírez: znovu určiť natočenie
     }
     for (const r of res.risers) { r.P = mp(r.P); r.Q = mp(r.Q); }
     const G = res.geom;
-    G.inner = mo(G.inner); G.walk = mo(G.walk); G.wall = mo(G.wall); G.ctrl = mo(G.ctrl);
+    G.inner = mo(G.inner); G.walk = mo(G.walk); G.wall = mo(G.wall); G.wallReal = mo(G.wallReal); G.ctrl = mo(G.ctrl);
     G.start = G.start.map(mp); G.end = G.end.map(mp);
     G.walkStart = mp(G.walkStart); G.walkEnd = mp(G.walkEnd); G.walkEndDir = mp(G.walkEndDir);
     G.outline = mc(G.outline);
@@ -5819,11 +6227,75 @@ void main() {
   }
 
   // tvar stupňa v polohe na výrobu: nástupná hrana dole, začiatok v (0,0)
+  // ---------------------------------------------------------------- chyby zadania: ktoré pole a overené automatické opravy
+  // pre každú chybu vráti { text, pole: [kľúče polí], navrhy: [{ popis, zmena }] }; návrh sa ponúkne len ak po ňom chyba zmizne
+  function navrhOprav(input, res) {
+    const P = res.input || normalize(input), h = res.h || 0;
+    const r = x => Math.round(x);
+    const vrstva = k => {
+      const val = P[k], out = [{ popis: 'bez vrstvy (0 mm)', zmena: { [k]: 0 } }];
+      // pravdepodobný preklep (napr. 230 namiesto 23)
+      for (const d of [10, 100]) if (val / d >= 5 && val / d < h) { out.unshift({ popis: fmt(r(val / d)) + ' mm (preklep?)', zmena: { [k]: r(val / d) } }); break; }
+      return out;
+    };
+    const rameno = (k, min) => [{ popis: k + ' = ' + fmt(Math.ceil(min / 10) * 10) + ' mm', zmena: { [k]: Math.ceil(min / 10) * 10 } }];
+    const W = P.W;
+    const PRAVIDLA = [
+      [/Nášľapná vrstva dole/, ['podlahaDole'], () => vrstva('podlahaDole')],
+      [/Nášľapná vrstva hore/, ['podlahaHore'], () => vrstva('podlahaHore')],
+      [/Konštrukčná výška/, ['H'], () => [{ popis: 'H = 2800 mm', zmena: { H: 2800 } }]],
+      [/Výstupná čiara/, ['w'], () => [{ popis: 'stred ramena', zmena: { w: 0 } }]],
+      [/Počet výšok je príliš malý/, ['N'], () => [{ popis: 'počet výšok automaticky', zmena: { N: 0 } }]],
+      [/Rameno A musí/, ['A'], () => rameno('A', W + 300)],
+      [/Rameno B musí/, ['B'], () => rameno('B', W + 300)],
+      [/Rameno 1 musí/, ['R1'], () => rameno('R1', W + 300)],
+      [/Rameno [23] musí/, ['R2'], () => rameno('R2', W + 300)],
+      [/Stredné rameno/, ['S'], () => rameno('S', 2 * W + 300)],
+      [/Zrkadlo nemôže/, ['M'], () => [{ popis: 'zrkadlo 0 mm', zmena: { M: 0 } }]],
+      [/príliš malá pre bočnice/, ['W', 'hrubkaSchodnice'], () => [{ popis: 'šírka W medzi bočnicami', zmena: { wBoc: 'nie' } }]],
+      [/Šírka ramena musí/, ['W'], () => [{ popis: 'W = 900 mm', zmena: { W: 900 } }]],
+      [/Dĺžka schodov/, ['L'], () => [{ popis: 'L = 3800 mm', zmena: { L: 3800 } }]],
+      [/Polomer stĺpa/, ['Rs'], () => [{ popis: 'stĺp 100 mm', zmena: { Rs: 100 } }]],
+      [/Vonkajší polomer/, ['Rv'], () => rameno('Rv', P.Rs + 600)],
+      [/otočenie/, ['uhol'], () => [{ popis: '360°', zmena: { uhol: 360 } }]],
+      [/ručná úprava|ručný posun/, [], () => [{ popis: 'zrušiť ručné úpravy hrán', zmena: { upravy: null } }]],
+      [/pretínajú|prechádza cez vnútornú|nepretína stenu/, ['nb', 'r'], () => {
+        const out = [];
+        for (const d of [1, 2, 3]) out.push({ popis: 'vyrovnané stupne ' + (P.nb + d), zmena: { nb: P.nb + d }, jedna: true });
+        if (P.typ !== 'rovne' && P.typ !== 'tocite') for (const d of [100, 200, 300]) out.push({ popis: 'polomer rohu ' + fmt(P.r + d) + ' mm', zmena: { r: P.r + d }, jedna: true });
+        if (P.nb > 0) out.push({ popis: 'vyrovnané stupne ' + (P.nb - 1), zmena: { nb: P.nb - 1 }, jedna: true });
+        return out;
+      }]
+    ];
+    const zIn = input || P;
+    return res.errors.map(text => {
+      const pr = PRAVIDLA.find(q => q[0].test(text));
+      if (!pr) return { text, pole: [], navrhy: [] };
+      const navrhy = [];
+      for (const n of pr[2]()) {
+        // z variantov toho istého poľa stačí najmenšia zmena, ktorá pomôže
+        if (n.jedna && navrhy.some(q => Object.keys(q.zmena)[0] === Object.keys(n.zmena)[0])) continue;
+        const inp2 = Object.assign({}, zIn, n.zmena);
+        if (n.zmena.upravy === null) delete inp2.upravy;
+        let r2;
+        try { r2 = compute(inp2); } catch (e) { continue; }
+        if (r2.errors.indexOf(text) >= 0) continue; // chyba ostala
+        n.zostane = r2.errors.length; // počet chýb po oprave
+        navrhy.push(n);
+        if (navrhy.length >= 3) break;
+      }
+      navrhy.sort((a, b) => a.zostane - b.zostane);
+      return { text, pole: pr[1], navrhy };
+    });
+  }
+
   function partShape(tr) {
     const pr = tr.prirez;
     const tf = p => { const q = rotate(sub(p, pr.origin), pr.uhol); return v(q.x - pr.minX, q.y - pr.minY); };
     return {
-      poly: transformVerts(tr.polyOver, tf),
+      poly: transformVerts(tr.polyCut || tr.polyOver, tf),
+      over: tr.polyCut && tr.polyCut !== tr.polyOver ? transformVerts(tr.polyOver, tf) : null,
+      caps: (tr.caps || []).map(c => Object.assign({}, c, { poly: transformVerts(c.poly, tf) })),
       front: tr.front.map(tf),
       w: pr.dlzka, h: pr.sirka
     };
@@ -5831,7 +6303,7 @@ void main() {
 
   return {
     TYPY, DEFAULTS, ZABRADLIE, normalize, compute, equalize, railing, nest, nosingZ,
-    sampleVerts, polyArea, bbox, transformVerts, reverseClosed, arcOfBulge, partShape, fmt,
+    sampleVerts, polyArea, bbox, transformVerts, reverseClosed, arcOfBulge, partShape, fmt, navrhOprav,
     // pre testy
     _internal: { makePath, Line, Arc, pathPoint, intersectPath, mapOffset, pathPiece, joinPieces, cleanVerts }
   };
@@ -5866,8 +6338,16 @@ void main() {
     { name: 'ROZVINUTIE', color: 6, lt: 'CONTINUOUS' },
     { name: 'SCHODNICA', color: 30, lt: 'CONTINUOUS' },
     { name: 'DIELCE', color: 2, lt: 'CONTINUOUS' },
+    { name: 'CAPY', color: 4, lt: 'CONTINUOUS' },
     { name: 'STROP', color: 210, lt: 'DASHED' },
     { name: 'RAMENA', color: 1, lt: 'DASHED' }
+  ];
+  // vrstvy CNC výkresu bočníc (hĺbka drážky v názve vrstvy)
+  const CNC_LAYERS = d => [
+    { name: 'PRIREZ', color: 8, lt: 'CONTINUOUS' },
+    { name: 'REZ_OBRYS', color: 7, lt: 'CONTINUOUS' },
+    { name: 'DRAZKA_H' + d, color: 4, lt: 'CONTINUOUS' },
+    { name: 'POPIS', color: 3, lt: 'CONTINUOUS' }
   ];
 
   const P = (x, y) => ({ x, y });
@@ -5877,6 +6357,8 @@ void main() {
   const len = a => Math.hypot(a.x, a.y);
   const norm = a => { const l = len(a) || 1; return P(a.x / l, a.y / l); };
   const perp = a => P(-a.y, a.x);
+  const dot = (a, b) => a.x * b.x + a.y * b.y;
+  const dist = (a, b) => len(sub(a, b));
   const vv = pts => pts.map(p => ({ x: p.x, y: p.y, b: 0 }));
 
   function pl(v, o) { return Object.assign({ k: 'pl', v, c: false, L: 'OBRYS', lw: 'tenka', dash: null }, o || {}); }
@@ -5937,31 +6419,42 @@ void main() {
     const ts = opt.ts || Math.max(bb0.w, bb0.h) / 160; // mm modelu na 1 mm papiera
     const th = 2.5 * ts;
 
-    // stena: pás za vonkajšou hranou
-    if (G.hasWall) {
-      const wall = C.sampleVerts(G.wall, false, 4 * DEG);
-      const t = 120;
+    // pás hrúbky t von od schodov (od obrysu) pozdĺž lomenej čiary, v rohoch s miterom
+    const outward = (pts, t) => {
       const off = [];
-      for (let i = 0; i < wall.length; i++) {
-        // normála von (od schodov)
-        const i0 = Math.min(i, wall.length - 2);
-        const a = wall[i0], b = wall[i0 + 1];
+      for (let i = 0; i < pts.length; i++) {
+        const i0 = Math.min(i, pts.length - 2);
+        const a = pts[i0], b = pts[i0 + 1];
         let n = perp(norm(sub(b, a)));
-        const test = add(mul(add(a, b), 0.5), mul(n, 5));
+        const test = add(mul(add(a, b), 0.5), mul(n, (G.bocHrubka || 0) + 5));
         if (pointInPoly(test, outlinePts)) n = mul(n, -1);
-        // pri rohu predĺžiť (miter)
         let k = 1;
-        if (i > 0 && i < wall.length - 1) {
-          const n1 = perp(norm(sub(wall[i], wall[i - 1]))), n2 = perp(norm(sub(wall[i + 1], wall[i])));
+        if (i > 0 && i < pts.length - 1) {
+          const n1 = perp(norm(sub(pts[i], pts[i - 1]))), n2 = perp(norm(sub(pts[i + 1], pts[i])));
           const cosHalf = Math.sqrt(Math.max(0.01, (1 + n1.x * n2.x + n1.y * n2.y) / 2));
           k = 1 / cosHalf;
           const bis = norm(add(n1, n2));
           n = (n.x * bis.x + n.y * bis.y) > 0 ? bis : mul(bis, -1);
         }
-        off.push(add(wall[i], mul(n, t * k)));
+        off.push(add(pts[i], mul(n, t * k)));
       }
-      items.push(pl(vv(wall.concat(off.slice().reverse())), { c: true, L: 'STENA', fill: 'stena', lw: 'tenka' }));
-      items.push(pl(G.wall, { L: 'STENA', lw: 'hruba' }));
+      return off;
+    };
+    const wallV = G.wallReal || G.wall, tb = G.bocHrubka || 0;
+    // stena: pás za stenou (líce steny = vonkajšia strana bočnice)
+    if (G.hasWall) {
+      const wall = C.sampleVerts(wallV, false, 4 * DEG);
+      items.push(pl(vv(wall.concat(outward(wall, 120).reverse())), { c: true, L: 'STENA', fill: 'stena', lw: 'tenka' }));
+      items.push(pl(wallV, { L: 'STENA', lw: 'hruba' }));
+    }
+    // bočnice v pôdoryse: pri stene medzi lícom bočnice a stenou, vnútorná von od vnútornej hrany
+    if (tb > 0) {
+      const sw = C.sampleVerts(G.wall, false, 4 * DEG);
+      items.push(pl(vv(sw.concat(outward(sw, tb).reverse())), { c: true, L: 'SCHODNICA', fill: 'schodnica', lw: 'tenka' }));
+      if (inp.typ !== 'tocite') {
+        const si = C.sampleVerts(G.inner, false, 4 * DEG);
+        items.push(pl(vv(si.concat(outward(si, tb).reverse())), { c: true, L: 'SCHODNICA', fill: 'schodnica', lw: 'tenka' }));
+      }
     }
     if (G.column) items.push({ k: 'ci', x: G.column.c.x, y: G.column.c.y, r: G.column.r, L: 'OBRYS', fill: 'stena' });
 
@@ -6037,14 +6530,14 @@ void main() {
       const off1 = 9 * ts, off2 = 17 * ts;
       if (G.hasWall) {
         // úseky steny (len priame)
-        const wv = G.wall;
+        const wv = wallV;
         for (let i = 0; i < wv.length - 1; i++) {
           if (Math.abs(wv[i].b) > 1e-9) continue;
           const a = wv[i], b = wv[i + 1];
           const d = norm(sub(b, a));
           let n = perp(d);
           const mid = mul(add(a, b), 0.5);
-          if (pointInPoly(add(mid, mul(n, 5)), outlinePts)) n = mul(n, -1);
+          if (pointInPoly(add(mid, mul(n, tb + 5)), outlinePts)) n = mul(n, -1);
           const extra = 150; // za stenou
           const A2 = add(a, mul(n, extra)), B2 = add(b, mul(n, extra));
           items.push(...dim(A2, B2, n, off2, fmt(len(sub(b, a))), ts, { noExt: false }));
@@ -6053,7 +6546,7 @@ void main() {
           const ps = [0];
           for (const e of res.edges) {
             const q = sub(e.Q, a), along = q.x * d.x + q.y * d.y, across = Math.abs(q.x * n.x + q.y * n.y);
-            if (across < 1 && along > 1 && along < L - 1) ps.push(along);
+            if (across < tb + 1 && along > 1 && along < L - 1) ps.push(along);
           }
           ps.push(L);
           ps.sort((x, y) => x - y);
@@ -6069,7 +6562,14 @@ void main() {
       // šírka ramena na nástupe
       const s0 = G.start[0], s1 = G.start[1];
       const back = mul(norm(G.walkEndDir ? sub(res.edges[1].W, res.edges[0].W) : P(1, 0)), -1);
-      if (inp.typ !== 'tocite') items.push(...dim(s0, s1, back, off1, fmt(res.W), ts));
+      if (inp.typ !== 'tocite') {
+        items.push(...dim(s0, s1, back, off1, fmt(res.W) + (tb > 0 ? ' svetlá' : ''), ts));
+        if (tb > 0) {
+          // celková šírka ramena vrátane bočníc
+          const dn = norm(sub(s1, s0));
+          items.push(...dim(add(s0, mul(dn, -tb)), add(s1, mul(dn, tb)), back, off2, fmt(res.W + 2 * tb), ts));
+        }
+      }
       if (inp.typ === 'tocite') {
         const c = G.column.c;
         const a = add(c, P(0, 0));
@@ -6151,12 +6651,102 @@ void main() {
     return { items, ts, bbox: itemsBBox(items) };
   }
 
+  // zvislý rez obrysom v x: [najnižšie y, najvyššie y] alebo null
+  function polyYRange(poly, x) {
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % poly.length];
+      if ((a.x - x) * (b.x - x) > 0 || a.x === b.x) continue;
+      const y = a.y + (b.y - a.y) * (x - a.x) / (b.x - a.x);
+      lo = Math.min(lo, y); hi = Math.max(hi, y);
+    }
+    return isFinite(lo) ? [lo, hi] : null;
+  }
+
+  // rozvinutá strana s bočnicami na úpravu (editor bočníc): dielce s data-k, kotevné body pre polia s vynášacími čiarami
+  function bocStrana(res, key, opt) {
+    opt = opt || {};
+    const U = res.unfold && res.unfold[key];
+    if (!U || !U.tvary.length) return null;
+    const inp = res.input, h = res.h, H = inp.H, N = res.N;
+    const items = [];
+    const ids = {};
+    for (const b of res.bocnice || []) ids[b.key] = b.id;
+    const x0 = U.tvary.reduce((m, b) => Math.min(m, b.x0), U.pos[0]) - 150, x1 = U.pos[U.pos.length - 1] + 300;
+    const pd = res.podlaha || {};
+    items.push(line(P(x0, 0), P(U.pos[0] + 60, 0), { L: 'ROZVINUTIE', lw: 'stredna' }));
+    items.push(line(P(U.pos[U.pos.length - 1] - 60, H), P(x1, H), { L: 'ROZVINUTIE', lw: 'stredna' }));
+    if (pd.dole > 0) items.push(line(P(x0, -pd.dole), P(U.pos[0] + 60, -pd.dole), { L: 'ROZVINUTIE', dash: '-' }));
+    if (pd.hore > 0) items.push(line(P(U.pos[U.pos.length - 1] - 60, H - pd.hore), P(x1, H - pd.hore), { L: 'ROZVINUTIE', dash: '-' }));
+    for (const b of U.tvary) items.push(pl(vv(b.poly), { c: true, L: 'SCHODNICA', lw: 'stredna', fill: b.key === opt.sel ? 'bocSel' : b.upravena ? 'bocUpr' : 'schodnica', dk: b.key }));
+    for (const g of U.drazky) items.push(pl(vv([P(g.x0, g.y0), P(g.x1, g.y0), P(g.x1, g.y1), P(g.x0, g.y1)]), { c: true, L: 'DRAZKA', lw: 'tenka', dash: '-' }));
+    for (let j = 1; j < N; j++) {
+      const tr = res.treads[j - 1], y = j * h, xs = U.pos[j - 1] - inp.presah;
+      items.push(pl(vv([P(xs, y), P(U.pos[j], y), P(U.pos[j], y - inp.hrubka), P(xs, y - inp.hrubka)]), { c: true, L: 'ROZVINUTIE', lw: 'tenka', fill: tr && tr.kind === 'podesta' ? 'podesta' : 'stupen' }));
+    }
+    for (const r of U.rohy) items.push(line(P(r.s, -150), P(r.s, H + 150), { L: 'ROZVINUTIE', dash: '-.' }));
+    const ts = opt.ts || Math.max(x1 - x0, H) / 150;
+    for (const b of U.tvary) {
+      const pts = b.poly, bb = C.bbox(pts), cx = (bb.minX + bb.maxX) / 2, r = polyYRange(pts, cx);
+      if (r) items.push(tx(cx, (r[0] + r[1]) / 2, ids[b.key] || '', 3.4 * ts, { L: 'TEXT', vmid: true, bold: true }));
+    }
+    // kotvy: dielec na úpravu (vybraný, inak najdlhší), stupeň v jeho strede
+    const band = U.tvary.find(b => b.key === opt.sel) || U.tvary.slice().sort((a, b) => (b.x1 - b.x0) - (a.x1 - a.x0))[0];
+    const inBand = [];
+    for (let k = 1; k < N; k++) {
+      const tr = res.treads[k - 1];
+      if (tr && tr.kind === 'stupen' && U.pos[k - 1] > band.x0 + 30 && U.pos[k] < band.x1 - 30) inBand.push(k);
+    }
+    const anchors = {};
+    if (inBand.length) {
+      const k = inBand[Math.floor((inBand.length - 1) / 2)];
+      const xa = U.pos[k - 1], ra = polyYRange(band.poly, xa + 1);
+      if (ra) anchors.nad = { a: P(xa, k * h), b: P(xa, ra[1]) };
+      const xm = (U.pos[k - 1] + U.pos[k]) / 2, rm = polyYRange(band.poly, xm);
+      if (rm) anchors.pod = { a: P(xm, k * h - inp.hrubka), b: P(xm, rm[0]) };
+      const k2 = inBand[Math.min(inBand.length - 1, Math.floor((inBand.length - 1) / 2) + 1)];
+      const xw = k2 === k ? xm + (U.pos[k] - U.pos[k - 1]) * 0.3 : (U.pos[k2 - 1] + U.pos[k2]) / 2, rw = polyYRange(band.poly, xw);
+      if (rw) anchors.sirka = { a: P(xw, rw[1]), b: P(xw, rw[0]) };
+    }
+    // zaoblenie: roh dráhy (prechod do zákruty), inak stred dielca
+    const roh = U.rohy.find(q => q.s > band.x0 && q.s < band.x1) || U.rohy[0];
+    const xr = roh ? roh.s : (band.x0 + band.x1) / 2;
+    const bz = U.tvary.find(b => xr >= b.x0 && xr <= b.x1) || band, rz = polyYRange(bz.poly, xr);
+    if (rz) anchors.zaoblenie = { a: P(xr, rz[1]), b: P(xr, rz[1]) };
+    anchors.predZ = { a: P(band.x0, (polyYRange(band.poly, band.x0 + 1) || [0, 0])[0]), b: null };
+    anchors.predK = { a: P(band.x1, (polyYRange(band.poly, band.x1 - 1) || [0, 0])[1]), b: null };
+    return { items, ts, bbox: itemsBBox(items), anchors, band };
+  }
+
   // ---------------------------------------------------------------- dielce
   function part(res, tr, ts) {
     const s = C.partShape(tr);
     const items = [];
     items.push(pl(vv([P(0, 0), P(s.w, 0), P(s.w, s.h), P(0, s.h)]), { c: true, L: 'KOTY', dash: '-', lw: 'tenka' }));
     items.push(pl(s.poly, { c: true, L: 'DIELCE', lw: 'hruba', fill: tr.kind === 'podesta' ? 'podesta' : 'stupen' }));
+    // obrys stupňa bez čapov (len informatívne, nerezať)
+    if (s.over) items.push(pl(s.over, { c: true, L: 'KOTY', dash: '-', lw: 'tenka', noExport: true }));
+    // čapy do drážok bočníc – zvýraznené (súčasť obrysu na rez, samostatne sa neexportujú)
+    const cutPts = C.sampleVerts(s.poly, true, 3 * DEG);
+    for (const c of s.caps) {
+      items.push(pl(c.poly, { c: true, L: 'CAPY', lw: 'stredna', fill: 'cap', noExport: true }));
+      // kóta čapu: dĺžka × hĺbka, hrúbka a frézovanie z oboch strán – vo vnútri stupňa popri čape
+      const cp = C.sampleVerts(c.poly, true, 3 * DEG);
+      let ia = 0, best = -1;
+      for (let i = 0; i < cp.length; i++) { const L = dist(cp[i], cp[(i + 1) % cp.length]); if (L > best) { best = L; ia = i; } }
+      const a = cp[ia], b = cp[(ia + 1) % cp.length], d = norm(sub(b, a));
+      let nn = perp(d);
+      const mid = mul(add(a, b), 0.5);
+      const cc = C.bbox(cutPts), ctr = P((cc.minX + cc.maxX) / 2, (cc.minY + cc.maxY) / 2);
+      if (dot(nn, sub(ctr, mid)) < 0) nn = mul(nn, -1);
+      const tp = add(mid, mul(nn, c.hlbka + 5.2 * ts));
+      let ang = Math.atan2(d.y, d.x) / DEG;
+      if (ang > 90.01) ang -= 180; if (ang < -89.99) ang += 180;
+      const fr = (res.input.hrubka - c.hrubka) / 2;
+      let lab = 'čap ' + fmt(c.dlzka) + ' × ' + fmt(c.hlbka) + ', hr. ' + fmt(c.hrubka) + (fr > 0 ? ' (fréza 2 × ' + fmt(fr, fr % 1 ? 1 : 0) + ')' : '');
+      if (lab.length * 0.55 * 1.6 * ts > c.dlzka * 1.1) lab = 'čap ' + fmt(c.dlzka); // krátky čap – plný rozmer je v tabuľke dielca
+      items.push(tx(tp.x, tp.y, lab, 1.6 * ts, { L: 'CAPY', ang, vmid: true }));
+    }
     // dĺžky hrán
     const n = s.poly.length;
     const pts = C.sampleVerts(s.poly, true, 3 * DEG);
@@ -6183,6 +6773,24 @@ void main() {
     items.push(tx(s.w / 2, -3.5 * ts, 'prírez ' + fmt(s.w) + ' × ' + fmt(s.h) + ' × ' + fmt(res.input.hrubka), 2.2 * ts, { L: 'TEXT', vmid: true }));
     items.push(tx(s.w / 2, -6.8 * ts, '▲ nástupná hrana', 1.8 * ts, { L: 'TEXT', vmid: true }));
     return { items, w: s.w, h: s.h, top: 1 * ts, bottom: 9 * ts };
+  }
+
+  // bočnica v prírezе: obrys na rez, drážky, kóty prírezu a popisy (súradnice prírezu, mm)
+  function bocnica(res, b, ts, o) {
+    o = o || {};
+    const items = [], W = b.prirez.dlzka, H = b.prirez.sirka, dL = 'DRAZKA_H' + fmt(b.drazky.length ? b.drazky[0].hlbka : 0, 1).replace(',0', '').replace(',', '_');
+    items.push(pl(vv([P(0, 0), P(W, 0), P(W, H), P(0, H)]), { c: true, L: 'PRIREZ', dash: '-', lw: 'tenka', fill: o.fill ? 'priRez' : null }));
+    items.push(pl(b.obrys, { c: true, L: 'REZ_OBRYS', lw: 'hruba', fill: o.fill ? 'bocnica' : null }));
+    for (const g of b.drazky) {
+      items.push(pl(g.verts, { c: true, L: dL, lw: 'stredna', fill: o.fill ? (g.typ === 'stupen' ? 'drazka' : 'drazkaP') : null }));
+      if (o.labels !== false) items.push(tx(g.lab.x, g.lab.y, (g.typ === 'stupen' ? 'S' : 'P') + g.n, 1.6 * ts, { L: 'POPIS', vmid: true }));
+    }
+    if (o.dims !== false) {
+      items.push(...dim(P(0, 0), P(W, 0), P(0, -1), 5 * ts, fmt(W), ts));
+      items.push(...dim(P(W, 0), P(W, H), P(1, 0), 5 * ts, fmt(H), ts));
+      if (o.title !== false) items.push(tx(0, H + 3 * ts, b.id + ' · ' + b.nazov + ' · st. ' + b.stupne + ' · hrúbka ' + fmt(b.hrubka) + (b.oblukova ? ' · OBLÚKOVÁ (rozvinutá)' : ''), 2.4 * ts, { L: 'POPIS', al: 'l', bold: true }));
+    }
+    return { items, w: W, h: H };
   }
 
   // rozloženie dielcov do riadkov (šírka v mm modelu); vracia zoznam {items posunutých, page?}
@@ -6262,9 +6870,10 @@ void main() {
         if (it.err) cls.push('err');
         if (it.upr) cls.push('upr');
         if (it.hover) cls.push('hov');
+        if (it.dk) cls.push('pk');
         const sw = lwMap[it.lw || 'tenka'];
         out += '<path class="' + cls.join(' ') + '" d="' + svgPath(it.v, it.c) + '" stroke-width="' + sw + '"' +
-          (it.hover ? ' data-n="' + it.hover + '"' : '') + '/>';
+          (it.hover ? ' data-n="' + it.hover + '"' : '') + (it.dk ? ' data-k="' + esc(it.dk) + '"' : '') + '/>';
       } else if (it.k === 'ci') {
         out += '<circle class="L-' + it.L + (it.fill ? ' f-' + it.fill : '') + '" cx="' + f2(it.x) + '" cy="' + f2(-it.y) + '" r="' + f2(it.r) + '" stroke-width="0.8"/>';
       } else if (it.k === 'tx') {
@@ -6283,12 +6892,13 @@ void main() {
     '.L-STENA{stroke:#4b5563}.f-stena{fill:#d9dde3}',
     '.L-VYSTUPNA_CIARA{stroke:#c2410c}.L-VYSTUPNA_CIARA.f-cur,circle.L-VYSTUPNA_CIARA{fill:#c2410c}',
     '.L-KOTY{stroke:#2f7d4f}.L-PODSTUPNICE{stroke:#64748b}.L-SCHODNICA{stroke:#8a5a2b}.f-schodnica{fill:#e9d8c4;fill-opacity:.6}',
-    '.L-STROP{stroke:#7c3aed}.T-STROP{fill:#7c3aed}.L-RAMENA{stroke:#dc2626}.T-RAMENA{fill:#dc2626}.f-stupen{fill:#f4efe6}.f-podesta{fill:#e7efe0}.L-DIELCE{stroke:#1d2733}.err{stroke:#dc2626}',
-    '.hov{stroke:none}',
-    'text{font-family:"DejaVu Sans",Arial,sans-serif;fill:#1d2733}.T-KOTY{fill:#2f7d4f}.b{font-weight:700}'
+    '.L-PRIREZ{stroke:#94a3b8}.f-priRez{fill:#f8fafc}.L-REZ_OBRYS{stroke:#1d2733}.f-bocnica{fill:#efe2cf}[class*=L-DRAZKA]{stroke:#0e7490}.f-drazka{fill:#a5d8e6}.f-drazkaP{fill:#cbe9f0}.T-POPIS{fill:#155e75}' +
+    '.L-STROP{stroke:#7c3aed}.T-STROP{fill:#7c3aed}.L-RAMENA{stroke:#dc2626}.T-RAMENA{fill:#dc2626}.f-stupen{fill:#f4efe6}.f-podesta{fill:#e7efe0}.L-DIELCE{stroke:#1d2733}.L-CAPY{stroke:#0e7490}.f-cap{fill:#7dc4d8}.err{stroke:#dc2626}',
+    '.hov{stroke:none}.f-bocSel{fill:#bcd3f5}.f-bocUpr{fill:#f3d9b8}.L-DRAZKA{stroke:#0e7490}',
+    'text{font-family:"DejaVu Sans",Arial,sans-serif;fill:#1d2733}.T-KOTY{fill:#2f7d4f}.T-CAPY{fill:#0e7490}.b{font-weight:700}'
   ].join('');
 
-  return { LAYERS, plan, unfold, part, partsLayout, moveItems, itemsBBox, toSVG, svgPath, SVG_STYLE, dim };
+  return { LAYERS, CNC_LAYERS, bocnica, bocStrana, polyYRange, plan, unfold, part, partsLayout, moveItems, itemsBBox, toSVG, svgPath, SVG_STYLE, dim };
 });
 
 </script>
@@ -6329,7 +6939,13 @@ void main() {
           objem: sh.prirez.dlzka * sh.prirez.sirka * inp.hrubkaSchodnice / 1e9
         }));
       };
-      if (inp.typ === 'tocite') {
+      if (res.bocnice && res.bocnice.length) {
+        for (const b of res.bocnice) schodnice.push({
+          nazov: b.id + ' ' + b.nazov + (b.oblukova ? ' (oblúková)' : ''), stupne: b.stupne,
+          dlzka: b.prirez.dlzka, sirka: b.prirez.sirka, hrubka: b.hrubka, objem: b.prirez.dlzka * b.prirez.sirka * b.hrubka / 1e9
+        });
+        if (inp.typ === 'tocite') schodnice.push({ nazov: 'Stĺp (vreteno) Ø ' + fmt(2 * inp.Rs), stupne: '1–' + (res.N - 1), dlzka: inp.H, sirka: 2 * inp.Rs, hrubka: 2 * inp.Rs, objem: Math.PI * inp.Rs * inp.Rs * inp.H / 1e9 });
+      } else if (inp.typ === 'tocite') {
         add('vonkajsia', 'Vonkajšia schodnica (rozvinutá, zakrivená)');
         schodnice.push({ nazov: 'Stĺp (vreteno) Ø ' + fmt(2 * inp.Rs), stupne: '1–' + (res.N - 1), dlzka: inp.H, sirka: 2 * inp.Rs, hrubka: 2 * inp.Rs, objem: Math.PI * inp.Rs * inp.Rs * inp.H / 1e9 });
       } else {
@@ -6386,7 +7002,7 @@ void main() {
     const put = (t, nazov, p) => { if (!(p.w > 1 && p.h > 1)) return; const g = byT[t] || (byT[t] = { hrubka: t, nazvy: [], pieces: [] }); if (g.nazvy.indexOf(nazov) < 0) g.nazvy.push(nazov); g.pieces.push(p); };
     for (const q of stupne) put(inp.hrubka, 'stupne', { n: (q.druh === 'podesta' ? 'P' : 'S') + q.n, w: q.dlzka, h: q.sirka });
     for (const q of podst) put(inp.hrubkaPodst, 'podstupnice', { n: 'Pd' + q.n, w: q.dlzka, h: q.vyska });
-    schodnice.forEach((q, i) => { if (!/^Stĺp/.test(q.nazov)) put(inp.hrubkaSchodnice, 'schodnice', { n: 'Sch' + (i + 1), w: q.dlzka, h: q.sirka }); });
+    schodnice.forEach((q, i) => { if (!/^Stĺp/.test(q.nazov)) put(inp.hrubkaSchodnice, 'bočnice', { n: (q.nazov.match(/^B\d+/) || ['Sch' + (i + 1)])[0], w: q.dlzka, h: q.sirka }); });
     return Object.keys(byT).map(Number).sort((a, b) => b - a).map(t => Object.assign({ hrubka: t, nazvy: byT[t].nazvy }, C.nest(byT[t].pieces, D, S, kerf)));
   }
 
@@ -6466,12 +7082,13 @@ void main() {
       .replace(/≥/g, '>=').replace(/≤/g, '<=').replace(/⌒/g, '').replace(/▲/g, '^').replace(/–/g, '-').replace(/[\r\n]/g, ' ');
   }
 
-  function dxfEntities(items, w, dash) {
+  function dxfEntities(items, w, layers) {
+    layers = layers || D.LAYERS;
     const n = x => (Math.round(x * 1e4) / 1e4).toString();
     for (const it of items) {
       if (it.noExport) continue;
       const lt = it.dash === '-' ? 'DASHED' : it.dash === '-.' ? 'DASHDOT' : null;
-      const layerLt = (D.LAYERS.find(l => l.name === it.L) || {}).lt;
+      const layerLt = (layers.find(l => l.name === it.L) || {}).lt;
       const ltCode = lt && lt !== layerLt ? ['6', lt] : (!lt && layerLt !== 'CONTINUOUS' ? ['6', 'CONTINUOUS'] : []);
       if (it.k === 'pl') {
         if (it.v.length < 2) continue;
@@ -6522,11 +7139,30 @@ void main() {
   }
 
   function dxf(res) {
-    const lines = [];
-    const w = (...a) => { for (const x of a) lines.push(String(x)); };
     const L = dxfLayout(res);
     const all = [];
     for (const s of L.sections) all.push(...D.moveItems(s.items, s.dx, s.dy));
+    return dxfWrite(all, D.LAYERS);
+  }
+
+  // CNC: bočnice v prírezoch vedľa seba (alebo jedna podľa id), počiatok v ľavom dolnom rohu prírezu
+  function dxfBocnice(res, id) {
+    const list = (res.bocnice || []).filter(b => !id || b.id === id);
+    const all = [];
+    let y = 0;
+    for (const b of list) {
+      const its = D.bocnica(res, b, 10, { dims: false }).items;
+      its.push({ k: 'tx', x: 0, y: b.prirez.sirka + 30, s: b.id + ' ' + b.nazov + ' st. ' + b.stupne + ' hr. ' + fmt(b.hrubka) + ' - pohlad na stranu s drazkami', h: 25, L: 'POPIS', al: 'l', ang: 0 });
+      all.push(...D.moveItems(its, 0, y));
+      y -= b.prirez.sirka + 200;
+    }
+    const d = list.length && list[0].drazky.length ? fmt(list[0].drazky[0].hlbka, 1).replace(',0', '').replace(',', '_') : '0';
+    return dxfWrite(all, D.CNC_LAYERS(d));
+  }
+
+  function dxfWrite(all, layers) {
+    const lines = [];
+    const w = (...a) => { for (const x of a) lines.push(String(x)); };
     const bb = D.itemsBBox(all) || { minX: 0, minY: 0, maxX: 1000, maxY: 1000 };
     const n = x => (Math.round(x * 1e3) / 1e3).toString();
     // HEADER
@@ -6555,9 +7191,9 @@ void main() {
       '0', 'LTYPE', '2', 'DASHED', '70', '0', '3', '__ __ __', '72', '65', '73', '2', '40', '45.0', '49', '30.0', '49', '-15.0',
       '0', 'LTYPE', '2', 'DASHDOT', '70', '0', '3', '__ . __ .', '72', '65', '73', '4', '40', '80.0', '49', '50.0', '49', '-15.0', '49', '0.0', '49', '-15.0',
       '0', 'ENDTAB');
-    w('0', 'TABLE', '2', 'LAYER', '70', String(D.LAYERS.length + 1),
+    w('0', 'TABLE', '2', 'LAYER', '70', String(layers.length + 1),
       '0', 'LAYER', '2', '0', '70', '0', '62', '7', '6', 'CONTINUOUS');
-    for (const l of D.LAYERS) w('0', 'LAYER', '2', l.name, '70', '0', '62', String(l.color), '6', l.lt);
+    for (const l of layers) w('0', 'LAYER', '2', l.name, '70', '0', '62', String(l.color), '6', l.lt);
     w('0', 'ENDTAB');
     w('0', 'TABLE', '2', 'STYLE', '70', '1',
       '0', 'STYLE', '2', 'STANDARD', '70', '0', '40', '0.0', '41', '1.0', '50', '0.0', '71', '0', '42', '2.5', '3', 'txt', '4', '',
@@ -6565,7 +7201,7 @@ void main() {
     w('0', 'ENDSEC');
     w('0', 'SECTION', '2', 'BLOCKS', '0', 'ENDSEC');
     w('0', 'SECTION', '2', 'ENTITIES');
-    dxfEntities(all, w);
+    dxfEntities(all, w, layers);
     w('0', 'ENDSEC', '0', 'EOF');
     // skupinový kód odsadený podľa konvencie
     const out = [];
@@ -6581,6 +7217,7 @@ void main() {
   const PAGE = { w: 420, h: 297, m: 10 };
   const SCALES = [10, 20, 25, 50, 100, 200];
   const COLORS = {
+    priRez: [248, 250, 252], bocnica: [239, 226, 207], drazka: [165, 216, 230], drazkaP: [203, 233, 240], cap: [125, 196, 216], CAPY: [14, 116, 144], REZ_OBRYS: [29, 39, 51], PRIREZ: [148, 163, 184], POPIS: [21, 94, 117],
     stena: [217, 221, 227], stupen: [244, 239, 230], podesta: [231, 239, 224], schodnica: [240, 228, 212],
     STENA: [75, 85, 99], VYSTUPNA_CIARA: [194, 65, 12], KOTY: [47, 125, 79], PODSTUPNICE: [100, 116, 139], SCHODNICA: [138, 90, 43], STROP: [124, 58, 237], RAMENA: [220, 38, 38], err: [220, 38, 38]
   };
@@ -6623,7 +7260,7 @@ void main() {
           if (it.v.length < 2) continue;
           const pts = C.sampleVerts(it.v, it.c, 3 * DEG).map(T);
           const fill = it.fill && it.fill !== 'cur' ? COLORS[it.fill] : null;
-          const col = it.err ? COLORS.err : (COLORS[it.L] || [29, 39, 51]);
+          const col = it.err ? COLORS.err : (COLORS[it.L] || (/^DRAZKA/.test(it.L) ? [14, 116, 144] : [29, 39, 51]));
           let style = 'S';
           if (it.fill === 'cur') { doc.setFillColor(col[0], col[1], col[2]); style = 'F'; }
           else if (fill) { doc.setFillColor(fill[0], fill[1], fill[2]); style = it.lw === 'none' ? 'F' : 'FD'; }
@@ -6647,7 +7284,7 @@ void main() {
           doc.circle(c.x, c.y, it.r / scale, fill ? 'FD' : 'S');
         } else if (it.k === 'tx') {
           const c = T(it);
-          const col = it.L === 'KOTY' || it.L === 'STROP' || it.L === 'RAMENA' ? COLORS[it.L] : [29, 39, 51];
+          const col = ['KOTY', 'STROP', 'RAMENA', 'POPIS'].indexOf(it.L) >= 0 ? COLORS[it.L] : [29, 39, 51];
           doc.setTextColor(col[0], col[1], col[2]);
           ptext(it.s, c.x, c.y, it.h / scale, { al: it.al, ang: it.ang, vmid: it.vmid, bold: it.bold });
           doc.setTextColor(0, 0, 0);
@@ -6837,6 +7474,33 @@ void main() {
       }
     }
 
+    // --- listy: bočnice pre CNC
+    if (res.bocnice && res.bocnice.length) {
+      const bs = res.bocnice;
+      const aw = PAGE.w - 2 * PAGE.m - 16, ah = PAGE.h - 2 * PAGE.m - 56;
+      const maxL = Math.max.apply(null, bs.map(b => b.prirez.dlzka));
+      const S = [10, 20, 25, 50].find(sc => maxL / sc <= aw - 10) || 50;
+      const rows = [];
+      let pg = [], y = 0;
+      for (const b of bs) {
+        const hh = b.prirez.sirka / S + 16;
+        if (pg.length && y + hh > ah) { rows.push(pg); pg = []; y = 0; }
+        pg.push({ b, y }); y += hh;
+      }
+      if (pg.length) rows.push(pg);
+      rows.forEach((list, pi) => pages.push(() => {
+        ptext('BOČNICE – CNC', PAGE.m + 5, PAGE.m + 8, 4, { al: 'l', bold: true });
+        ptext('Pohľad na stranu s drážkami. Hrubo = rez obrysu, modro = drážky hĺbky ' + fmt(inp.drazkaHlbka) + ' mm (S = stupeň, P = podstupnica), čiarkovane = prírez s prídavkom ' + fmt(inp.bocOkraj) + ' mm.', PAGE.m + 62, PAGE.m + 8, 2.3, { al: 'l' });
+        for (const it of list) {
+          const ox = PAGE.m + 8, oy = PAGE.m + 20 + it.y + 4;
+          const its = D.bocnica(res, it.b, S, { fill: true });
+          const T = q => ({ x: ox + q.x / S, y: oy + (it.b.prirez.sirka - q.y) / S });
+          drawItems(its.items, T, S);
+        }
+        return { vykres: 'Bočnice – CNC' + (rows.length > 1 ? ' (' + (pi + 1) + '/' + rows.length + ')' : ''), mierka: '1 : ' + S };
+      }));
+    }
+
     // --- list: rozpis materiálu
     pages.push(() => {
       const b = bom(res);
@@ -6976,7 +7640,7 @@ void main() {
     throw new Error('Súbor neobsahuje projekt Schodiskára.');
   }
 
-  return { bom, csv, dxf, pdf, paramRows, projectJSON, parseProject, encodeCP1250 };
+  return { bom, csv, dxf, dxfBocnice, pdf, paramRows, projectJSON, parseProject, encodeCP1250 };
 });
 
 </script>
@@ -7880,7 +8544,7 @@ void main() {
     input = C.normalize(raw);
   })();
   let res = null;
-  const TABS = ['plan', '3d', 'unfold', 'parts', 'bom', 'checks'];
+  const TABS = ['plan', '3d', 'unfold', 'parts', 'boc', 'bom', 'checks'];
   let tab = TABS.indexOf(location.hash.slice(1)) >= 0 ? location.hash.slice(1) : 'plan';
   let viewBoxState = {};
 
@@ -7923,19 +8587,21 @@ void main() {
         '<div class="inp' + (wide ? '' : ' sp') + '"><input id="in-' + k + '" data-key="' + k + '" ' + (wide ? '' : 'inputmode="decimal" data-min="0" data-step="' + (['N', 'nb'].includes(k) ? 1 : 10) + '" ') + 'autocomplete="off" spellcheck="false">' +
         (unit ? '<span class="u">' + unit + '</span>' : '') + (wide ? '' : SPIN) + '</div></div>').join('');
     }
-    document.querySelectorAll('input[data-key]').forEach(inp => {
-      inp.addEventListener('input', () => onField(inp));
-      inp.addEventListener('change', () => onField(inp, true));
-      inp.addEventListener('keydown', e => {
-        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
-        const k = inp.dataset.key;
-        if (typeof getK(k) !== 'number') return;
-        e.preventDefault();
-        const step = e.shiftKey ? 100 : (['N', 'nb'].includes(k) ? 1 : 10);
-        const v = (parseNum(inp.value) || 0) + (e.key === 'ArrowUp' ? step : -step);
-        inp.value = String(Math.max(0, Math.round(v * 100) / 100)).replace('.', ',');
-        onField(inp, true);
-      });
+    document.querySelectorAll('input[data-key]').forEach(bindInput);
+  }
+
+  function bindInput(inp) {
+    inp.addEventListener('input', () => onField(inp));
+    inp.addEventListener('change', () => onField(inp, true));
+    inp.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      const k = inp.dataset.key;
+      if (typeof getK(k) !== 'number') return;
+      e.preventDefault();
+      const step = (+inp.dataset.step || (['N', 'nb'].includes(k) ? 1 : 10)) * (e.shiftKey ? 10 : 1);
+      const v = (parseNum(inp.value) || 0) + (e.key === 'ArrowUp' ? step : -step);
+      inp.value = String(Math.max(0, Math.round(v * 100) / 100)).replace('.', ',');
+      onField(inp, true);
     });
   }
 
@@ -7963,6 +8629,7 @@ void main() {
       inp.value = typeof v === 'number' ? String(v).replace('.', ',') : (v || '');
       inp.classList.remove('bad');
     });
+    document.querySelectorAll('select[data-key]').forEach(s => { s.value = getK(s.dataset.key); });
     document.querySelectorAll('#types button').forEach(b => { const on = b.dataset.typ === input.typ; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
     document.querySelectorAll('#dirRow button').forEach(b => { const on = b.dataset.smer === input.smer; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
     $('#dirRow').hidden = input.typ === 'rovne';
@@ -8018,8 +8685,35 @@ void main() {
     h += '<div class="status ' + res.stav + '">' + st + '</div>';
     s.innerHTML = h;
     const m = $('#msgs');
-    m.innerHTML = res.errors.map(e => '<div class="msg err">' + esc(e) + '</div>').join('') +
+    // chyby: odkaz na pole v zadaní a overené automatické opravy
+    let diag = [];
+    try { diag = res.errors.length && res.input ? C.navrhOprav(input, res) : res.errors.map(text => ({ text, pole: [], navrhy: [] })); }
+    catch (e) { console.error(e); diag = res.errors.map(text => ({ text, pole: [], navrhy: [] })); }
+    const pole = diag.filter(d => d.pole.length && fldOf(d.pole[0]));
+    m.innerHTML = diag.map((d, i) => '<div class="msg err"><span>' + esc(d.text) + '</span>' +
+        (d.pole.length && fldOf(d.pole[0]) ? '<button class="msgBtn" data-ukaz="' + i + '">Ukázať pole</button>' : '') +
+        d.navrhy.map((n, j) => '<button class="msgBtn fix" data-fix="' + i + ':' + j + '" title="Po zmene ' + (n.zostane ? 'ostane ' + n.zostane + ' iná chyba' : 'nebude žiadna chyba') + '">Opraviť: ' + esc(n.popis) + '</button>').join('') +
+        '</div>').join('') +
       res.warnings.map(e => '<div class="msg warn">' + esc(e) + '</div>').join('');
+    document.querySelectorAll('.fld.errFld').forEach(f => f.classList.remove('errFld'));
+    for (const d of pole) for (const k of d.pole) { const f = fldOf(k); if (f) f.classList.add('errFld'); }
+    m.querySelectorAll('[data-ukaz]').forEach(b => b.addEventListener('click', () => ukazPole(diag[+b.dataset.ukaz].pole[0])));
+    m.querySelectorAll('[data-fix]').forEach(b => b.addEventListener('click', () => {
+      const [i, j] = b.dataset.fix.split(':').map(Number), z = diag[i].navrhy[j].zmena;
+      for (const k of Object.keys(z)) { if (z[k] === null) delete input[k]; else setK(k, z[k]); }
+      changed(true);
+      toast('Opravené: ' + diag[i].navrhy[j].popis);
+    }));
+  }
+  // pole zadania v bočnom paneli podľa kľúča
+  function fldOf(k) { const inp = document.querySelector('#in-' + k); return inp ? inp.closest('.fld') : null; }
+  function ukazPole(k) {
+    const f = fldOf(k);
+    if (!f) return;
+    f.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    f.classList.remove('blink'); void f.offsetWidth; f.classList.add('blink');
+    const inp = f.querySelector('input, select');
+    if (inp) setTimeout(() => { inp.focus(); if (inp.select) inp.select(); }, 350);
   }
 
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -8035,6 +8729,7 @@ void main() {
     if (tab === 'unfold') return viewUnfold(v);
     if (tab === 'parts') return viewParts(v);
     if (tab === 'bom') return viewBom(v);
+    if (tab === 'boc') return viewBoc(v);
     if (tab === 'checks') return viewChecks(v);
   }
 
@@ -8392,7 +9087,9 @@ void main() {
   }
 
   function viewParts(v) {
-    if (!res.treads || !res.treads.length) return noData(v);
+    const capFields = [['hrubka', 'Hrúbka stupňa', 'mm', 1]].concat(BOC_FIELDS.filter(f => ['spoj', 'capHrubka', 'drazkaHlbka', 'capOdsadenie', 'capOdsadenieZad'].indexOf(f[0]) >= 0));
+    const list = sideForm(v, 'cap', 'Čapy stupňov', capFields, 'Čap = výstupok stupňa do drážky bočnice. Dĺžka po hrane stupňa = hrana − odsadenie vpredu a vzadu, hĺbka = hĺbka drážky, hrúbka centrovaná – frézuje sa (hrúbka stupňa − hrúbka čapu) / 2 z každej strany. Rovnaké hodnoty sú aj v záložke Bočnice.');
+    if (!res.treads || !res.treads.length) { list.innerHTML = '<div class="empty">Pre zadané hodnoty nie je výsledok. Opravte chyby uvedené vyššie.</div>'; return; }
     let h = '<div class="parts">';
     for (const t of res.treads) {
       const ts = Math.max(t.prirez.dlzka, t.prirez.sirka * 2.4) / 95;
@@ -8403,9 +9100,11 @@ void main() {
         '<dl><dt>Šírka vnútri / výst. / vonku</dt><dd>' + fmt(t.sirky.vnutri) + ' / ' + fmt(t.sirky.vystup) + ' / ' + fmt(t.sirky.vonku) + '</dd>' +
         (t.sirky.kontrola != null ? '<dt>Šírka ' + input.lim.klinVzd + ' mm od vnútra</dt><dd>' + fmt(t.sirky.kontrola, 1) + '</dd>' : '') +
         '<dt>Plocha tvaru / prírezu</dt><dd>' + fmt(t.plochaSPresahom / 1e6, 3) + ' / ' + fmt(t.plochaPrirez / 1e6, 3) + ' m²</dd>' +
-        '<dt>Výška stupňa</dt><dd>+' + fmt(t.vyska) + '</dd></dl></div>';
+        '<dt>Výška stupňa</dt><dd>+' + fmt(t.vyska) + '</dd>' +
+        (t.caps || []).map(c => '<dt>Čap ' + (c.strana === 'vonku' ? 'vonku' : 'vnútri') + ' (dĺ. × hĺ. × hr.)</dt><dd>' + fmt(c.dlzka) + ' × ' + fmt(c.hlbka) + ' × ' + fmt(c.hrubka) +
+          (input.hrubka > c.hrubka ? ', frézovať 2 × ' + fmt((input.hrubka - c.hrubka) / 2, (input.hrubka - c.hrubka) % 2 ? 1 : 0) : '') + '</dd>').join('') + '</dl></div>';
     }
-    v.innerHTML = h + '</div>';
+    list.innerHTML = h + '</div>';
   }
 
   function viewBom(v) {
@@ -8454,6 +9153,206 @@ void main() {
     $('#selZabr').addEventListener('change', e => {
       input.viz = Object.assign({}, input.viz || {}, { zabradlie: e.target.value });
       store(); commitHist(); renderView();
+    });
+  }
+
+  // ---------------------------------------------------------------- bočnice pre CNC (editor)
+  const BOC_FIELDS = [
+    ['sirkaSchodnice', 'Šírka bočnice', 'mm', 10, 'kolmo na sklon'],
+    ['hrubkaSchodnice', 'Hrúbka bočnice', 'mm', 1],
+    ['wBoc', 'Šírka ramena W a polomer', [['ano', 'vrátane bočníc'], ['nie', 'medzi bočnicami (svetlá)']]],
+    ['bocTvar', 'Tvar bočnice', [['plynula', 'plynulá – oblé napojenie'], ['rovna', 'rovné dosky po úsekoch']]],
+    ['bocNad', 'Nad hranami stupňov', 'mm', 5, 'horná hrana nad nástupnými hranami'],
+    ['bocPod', 'Pod stupňami', 'mm', 5, 'materiál pod stupňom a drážkou'],
+    ['bocZaoblenie', 'Zaoblenie prechodov', 'mm', 50, 'dĺžka vyhladenia, len plynulá'],
+    ['bocOkraj', 'Prídavok prírezu', 'mm', 5, 'na každej strane, pre upnutie a rez'],
+    ['spoj', 'Uloženie stupňa', [['cap', 'čap v drážke'], ['plna', 'celá hrúbka v drážke'], ['ziadna', 'bez drážok']]],
+    ['capHrubka', 'Hrúbka čapu', 'mm', 1, 'centrovaný v hrúbke stupňa'],
+    ['drazkaHlbka', 'Hĺbka drážky', 'mm', 1, '= dĺžka čapu'],
+    ['capOdsadenie', 'Čap od prednej hrany', 'mm', 5, 'drážka nevyjde na čelo'],
+    ['capOdsadenieZad', 'Čap od zadnej hrany', 'mm', 5, 'zub pri podstupnici'],
+    ['vola', 'Vôľa drážky', 'mm', 0.1],
+    ['freza', 'Priemer frézy', 'mm', 1, 'polomer v rohoch drážok'],
+    ['drazkaPodst', 'Drážky pre podstupnice', [['ano', 'áno'], ['nie', 'nie']]]
+  ];
+  // bočný formulár pohľadu (ostáva pri prekreslení, aby sa nestratil fokus pri písaní); vracia kontajner zoznamu
+  function sideForm(v, id, title, fields, note) {
+    let list = v.querySelector('#' + id + 'List');
+    if (list) return list;
+    v.innerHTML = '<div class="boc"><form class="bocForm" id="' + id + 'Form" onsubmit="return false"><h3>' + title + '</h3>' +
+      fields.map(([k, label, unit, step, hint]) => Array.isArray(unit)
+        ? '<div class="fld" data-types="' + ALL + '"><label for="' + id + '-' + k + '">' + label + '</label><select id="' + id + '-' + k + '" data-key="' + k + '">' + unit.map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('') + '</select></div>'
+        : '<div class="fld" data-types="' + ALL + '"><label for="' + id + '-' + k + '">' + label + (hint ? '<small>' + hint + '</small>' : '') + '</label><div class="inp sp"><input id="' + id + '-' + k + '" data-key="' + k + '" inputmode="decimal" data-min="0" data-step="' + step + '" autocomplete="off"><span class="u">' + unit + '</span>' + SPIN + '</div></div>').join('') +
+      '<p class="note">' + note + '</p></form><div class="bocList" id="' + id + 'List"></div></div>';
+    v.querySelectorAll('#' + id + 'Form input[data-key]').forEach(bindInput);
+    v.querySelectorAll('#' + id + 'Form select[data-key]').forEach(s => s.addEventListener('change', () => { setK(s.dataset.key, s.value); changed(true); }));
+    syncForm(true);
+    return v.querySelector('#' + id + 'List');
+  }
+
+  function viewBoc(v) {
+    const list = sideForm(v, 'boc', 'Bočnice a spoj', BOC_FIELDS, 'Stupne dostanú na koncoch čap, bočnice drážky rovnakého tvaru. Rohy drážok majú polomer frézy – čelo čapu zaobliť rovnako.');
+    if (!res.bocnice || !res.bocnice.length) { list.innerHTML = '<div class="empty">Pre zadané hodnoty nie sú bočnice. Opravte chyby uvedené vyššie.</div>'; return; }
+    const bs = res.bocnice;
+    if (bocSel && !bs.some(b => b.key === bocSel)) bocSel = null;
+    const nG = bs.reduce((a, b) => a + b.drazky.length, 0);
+    const kus = n => n + (n === 1 ? ' dielec' : n < 5 ? ' dielce' : ' dielcov');
+    let h = '<div class="bocHead"><div><b>' + kus(bs.length) + '</b> · ' + nG + ' drážok hĺbky ' + fmt(input.drazkaHlbka) + ' mm · hrúbka ' + fmt(input.hrubkaSchodnice) + ' mm' +
+      '<br><span class="muted">Pohľad na stranu s drážkami, dielce natočené na najmenší prírez. DXF vrstvy: REZ_OBRYS (rez naskrz), DRAZKA_H' + fmt(input.drazkaHlbka, 1).replace(',0', '').replace(',', '_') + ' (vrecká), PRIREZ, POPIS.</span></div>' +
+      '<button class="btnS" data-dxf="">DXF všetkých bočníc</button></div>' + bocEditorHTML();
+    for (const b of bs) {
+      const ts = Math.max(b.prirez.dlzka, b.prirez.sirka * 3) / 110;
+      const d = D.bocnica(res, b, ts, { fill: true, title: false });
+      const bb = D.itemsBBox(d.items);
+      h += '<div class="bocCard' + (b.key === bocSel ? ' on' : '') + '" data-k="' + b.key + '"><header><b>' + b.id + ' · ' + esc(b.nazov) + '</b><span>st. ' + b.stupne + ' · prírez ' + fmt(b.prirez.dlzka) + ' × ' + fmt(b.prirez.sirka) + ' × ' + fmt(b.hrubka) + ' mm</span>' +
+        (b.oblukova ? '<span class="warnTag">oblúková – CNC len rozvinutá, ohýbaná bočnica</span>' : '') +
+        '<button class="btnS" data-dxf="' + b.id + '">DXF</button></header>' + D.toSVG(d.items, bb, { pad: ts * 2 }) + '</div>';
+    }
+    list.innerHTML = h;
+    list.querySelectorAll('[data-dxf]').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = btn.dataset.dxf;
+      download(E.dxfBocnice(res, id || null), slug() + '-bocnice' + (id ? '-' + id : '') + '.dxf', 'application/dxf');
+    }));
+    list.querySelectorAll('.bocCard header').forEach(hd => hd.addEventListener('click', () => {
+      const k = hd.parentNode.dataset.k;
+      bocSel = bocSel === k ? null : k;
+      renderView();
+      const st = $('#bocList .bocSide .f-bocSel');
+      if (st) st.closest('.bocSide').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }));
+    bindBocEditor(list);
+  }
+
+  // ---------------------------------------------------------------- editor bočníc na výkrese (polia s vynášacími čiarami)
+  let bocSel = null; // kľúč vybraného dielca – polia menia len jeho úpravy; inak globálne hodnoty
+  // f = pole úpravy dielca, g = globálny parameter, a = kotva vo výkrese
+  const BOC_ED = [
+    { f: 'nad', g: 'bocNad', a: 'nad', label: 'Nad hranami', band: 'top' },
+    { f: 'predK', a: 'predK', label: 'Predĺženie konca', band: 'top', piece: true },
+    { g: 'bocZaoblenie', a: 'zaoblenie', label: 'Zaoblenie', band: 'top', smooth: true },
+    { f: 'predZ', a: 'predZ', label: 'Predĺženie začiatku', band: 'bot', piece: true },
+    { f: 'sirka', g: 'sirkaSchodnice', a: 'sirka', label: 'Šírka bočnice', band: 'bot' },
+    { f: 'pod', g: 'bocPod', a: 'pod', label: 'Pod stupňami', band: 'bot' }
+  ];
+  const sideOfKey = k => k && (k[0] === 'u' ? 'vonkajsia' : 'vnutorna');
+  function bocSides() {
+    return [['vonkajsia', input.typ === 'tocite' ? 'Vonkajšia bočnica' : 'Bočnica pri stene'], ['vnutorna', 'Vnútorná bočnica']]
+      .filter(([k]) => res.unfold && res.unfold[k] && res.unfold[k].tvary.length && (k !== 'vnutorna' || input.typ !== 'tocite'));
+  }
+  function bocEditorHTML() {
+    const piece = bocSel && res.bocnice.find(b => b.key === bocSel);
+    let h = '<div class="bocEd"><div class="bocEdBar">' + (piece
+      ? '<span>Upravujete <b>' + piece.id + ' · ' + esc(piece.nazov) + '</b> – polia na výkrese menia len tento dielec.</span>' +
+        (piece.upravena ? '<button class="btnS" data-bocreset="1">Zrušiť úpravy dielca</button>' : '') + '<button class="btnS" data-bocdone="1">Hotovo</button>'
+      : '<span>Hodnoty na výkrese platia pre všetky bočnice. <b>Kliknite na dielec</b> a upravte len ten.</span>' +
+        (input.bocUpravy ? '<button class="btnS" data-bocreset="all">Zrušiť úpravy dielcov</button>' : '')) + '</div>';
+    for (const [k, title] of bocSides())
+      h += '<div class="bocSide" data-side="' + k + '"><div class="bocSideH">' + title + ' – rozvinutie</div><div class="bocStage"></div></div>';
+    return h + '</div>';
+  }
+  function bocVal(e, band) {
+    if (bocSel && e.f) {
+      const o = (input.bocUpravy || {})[bocSel] || {};
+      if (o[e.f] != null) return o[e.f];
+      return band[e.f] != null ? band[e.f] : 0;
+    }
+    return input[e.g];
+  }
+  function setBocVal(e, n) {
+    if (bocSel && e.f) {
+      const all = Object.assign({}, input.bocUpravy || {});
+      all[bocSel] = Object.assign({}, all[bocSel] || {}, { [e.f]: n });
+      input.bocUpravy = all;
+    } else input[e.g] = n;
+    changed(true);
+  }
+  function bindBocEditor(root) {
+    const bar = root.querySelector('.bocEdBar');
+    if (!bar) return;
+    const rs = bar.querySelector('[data-bocreset]');
+    if (rs) rs.addEventListener('click', () => {
+      if (rs.dataset.bocreset === 'all') delete input.bocUpravy;
+      else if (input.bocUpravy) { delete input.bocUpravy[bocSel]; if (!Object.keys(input.bocUpravy).length) delete input.bocUpravy; }
+      changed(true);
+    });
+    const dn = bar.querySelector('[data-bocdone]');
+    if (dn) dn.addEventListener('click', () => { bocSel = null; renderView(); });
+    root.querySelectorAll('.bocSide').forEach(sd => {
+      const key = sd.dataset.side, stage = sd.querySelector('.bocStage');
+      const sel = bocSel && sideOfKey(bocSel) === key ? bocSel : null;
+      const dr = D.bocStrana(res, key, { sel });
+      if (!dr) return;
+      stage.innerHTML = D.toSVG(dr.items, dr.bbox, { pad: dr.ts * 2 }) + '<svg class="bocLead"></svg>';
+      const svg = stage.querySelector('svg.vykres');
+      svg.addEventListener('click', ev => {
+        const p = ev.target.closest && ev.target.closest('[data-k]');
+        const k = p ? p.dataset.k : null;
+        if (!k && !bocSel) return;
+        bocSel = k && k !== bocSel ? k : null;
+        renderView();
+      });
+      // pri vybranom dielci majú polia len jeho strana; globálne polia bez výberu
+      const show = bocSel && !sel ? [] : BOC_ED.filter(e => (sel ? e.f : !e.piece) && (!e.smooth || input.bocTvar !== 'rovna'));
+      const els = show.map(e => {
+        const an = dr.anchors[e.a];
+        if (!an) return null;
+        const d = document.createElement('label');
+        d.className = 'bocFld';
+        const v = bocVal(e, dr.band);
+        const own = sel && e.f && ((input.bocUpravy || {})[sel] || {})[e.f] != null;
+        d.innerHTML = '<span>' + e.label + '</span><input inputmode="decimal" autocomplete="off" value="' + String(Math.round(v * 10) / 10).replace('.', ',') + '"' + (own ? ' class="own"' : '') + '><i>mm</i>';
+        const inp = d.querySelector('input');
+        const commit = () => {
+          const n = parseNum(inp.value);
+          if (n === null || n < 0) { inp.classList.add('bad'); return; }
+          if (Math.abs(n - v) > 1e-9) setBocVal(e, n);
+        };
+        inp.addEventListener('change', commit);
+        inp.addEventListener('keydown', ev => {
+          if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
+          if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown') {
+            ev.preventDefault();
+            const st = (e.g === 'bocZaoblenie' ? 50 : 5) * (ev.shiftKey ? 10 : 1);
+            inp.value = String(Math.max(0, (parseNum(inp.value) || 0) + (ev.key === 'ArrowUp' ? st : -st))).replace('.', ',');
+            commit();
+          }
+        });
+        stage.appendChild(d);
+        return { e, an, d };
+      }).filter(Boolean);
+      const layout = () => {
+        const ctm = svg.getScreenCTM(), r = stage.getBoundingClientRect();
+        if (!ctm || !r.width) return;
+        const px = q => ({ x: ctm.a * q.x - ctm.c * q.y + ctm.e - r.left, y: ctm.b * q.x - ctm.d * q.y + ctm.f - r.top });
+        const W = r.width, Hs = r.height;
+        let lead = '';
+        for (const bandName of ['top', 'bot']) {
+          const row = els.filter(o => o.e.band === bandName).map(o => {
+            const a = px(o.an.a), b = o.an.b ? px(o.an.b) : a;
+            return Object.assign(o, { a, b, m: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, w: o.d.offsetWidth });
+          }).sort((p, q) => p.m.x - q.m.x);
+          let xr = 4;
+          for (const o of row) { o.x = Math.max(xr, Math.min(W - o.w - 4, o.m.x - o.w / 2)); xr = o.x + o.w + 8; }
+          for (let i = row.length - 1, xl = W - 4; i >= 0; i--) { const o = row[i]; if (o.x + o.w > xl) o.x = xl - o.w; xl = o.x - 8; }
+          for (const o of row) {
+            const y = bandName === 'top' ? 6 : Hs - o.d.offsetHeight - 6;
+            o.d.style.left = o.x + 'px';
+            o.d.style.top = y + 'px';
+            const ly = bandName === 'top' ? y + o.d.offsetHeight : y, lx = o.x + o.w / 2;
+            lead += '<path d="M' + lx + ' ' + ly + 'L' + o.m.x + ' ' + o.m.y + '" class="ld"/>';
+            if (o.an.b && Math.hypot(o.a.x - o.b.x, o.a.y - o.b.y) > 2) {
+              lead += '<path d="M' + o.a.x + ' ' + o.a.y + 'L' + o.b.x + ' ' + o.b.y + '" class="dm"/>';
+              for (const q of [o.a, o.b]) lead += '<path d="M' + (q.x - 6) + ' ' + q.y + 'L' + (q.x + 6) + ' ' + q.y + '" class="dm"/>';
+            } else lead += '<circle cx="' + o.m.x + '" cy="' + o.m.y + '" r="3.5" class="dt"/>';
+          }
+        }
+        const ls = stage.querySelector('svg.bocLead');
+        ls.setAttribute('viewBox', '0 0 ' + W + ' ' + Hs);
+        ls.innerHTML = lead;
+      };
+      layout();
+      if (window.ResizeObserver) new ResizeObserver(layout).observe(stage);
     });
   }
 
